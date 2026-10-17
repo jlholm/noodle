@@ -45,6 +45,9 @@ func (l *Loop) buildAdoptedCook(targetID string, sessionID string, status string
 			return nil, false, nil
 		}
 		name := cookBaseName(order.ID, idx, stg.TaskKey)
+		if ws, ok := l.orderWorkspace(order.ID); ok {
+			name = ws.WorktreeName
+		}
 		worktreePath := l.worktreePath(name)
 		return &cookHandle{
 			cookIdentity: cookIdentity{

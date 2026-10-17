@@ -65,20 +65,23 @@ type orderStagePayload struct {
 }
 
 type reviewPayload struct {
-	OrderID      string   `json:"order_id"`
-	StageIndex   int      `json:"stage_index"`
-	AttemptID    string   `json:"attempt_id"`
-	SessionID    string   `json:"session_id"`
-	WorktreeName string   `json:"worktree_name"`
-	WorktreePath string   `json:"worktree_path"`
-	Reason       string   `json:"reason"`
-	TaskKey      string   `json:"task_key"`
-	Prompt       string   `json:"prompt"`
-	Provider     string   `json:"provider"`
-	Model        string   `json:"model"`
-	Runtime      string   `json:"runtime"`
-	Skill        string   `json:"skill"`
-	Plan         []string `json:"plan"`
+	OrderID        string   `json:"order_id"`
+	StageIndex     int      `json:"stage_index"`
+	AttemptID      string   `json:"attempt_id"`
+	SessionID      string   `json:"session_id"`
+	WorktreeName   string   `json:"worktree_name"`
+	WorktreePath   string   `json:"worktree_path"`
+	BranchName     string   `json:"branch_name"`
+	BaseBranch     string   `json:"base_branch"`
+	ApprovalAction string   `json:"approval_action"`
+	Reason         string   `json:"reason"`
+	TaskKey        string   `json:"task_key"`
+	Prompt         string   `json:"prompt"`
+	Provider       string   `json:"provider"`
+	Model          string   `json:"model"`
+	Runtime        string   `json:"runtime"`
+	Skill          string   `json:"skill"`
+	Plan           []string `json:"plan"`
 }
 
 type orderPayload struct {
@@ -623,19 +626,22 @@ func reduceStageReviewParked(current state.State, event ingest.StateEvent) (stat
 	order.Stages[payload.StageIndex] = stage
 	next.Orders[payload.OrderID] = order
 	next.PendingReviews[payload.OrderID] = state.PendingReviewNode{
-		OrderID:      payload.OrderID,
-		StageIndex:   payload.StageIndex,
-		TaskKey:      strings.TrimSpace(payload.TaskKey),
-		Prompt:       strings.TrimSpace(payload.Prompt),
-		Provider:     strings.TrimSpace(payload.Provider),
-		Model:        strings.TrimSpace(payload.Model),
-		Runtime:      strings.TrimSpace(payload.Runtime),
-		Skill:        strings.TrimSpace(payload.Skill),
-		Plan:         slices.Clone(payload.Plan),
-		WorktreeName: strings.TrimSpace(payload.WorktreeName),
-		WorktreePath: strings.TrimSpace(payload.WorktreePath),
-		SessionID:    strings.TrimSpace(payload.SessionID),
-		Reason:       strings.TrimSpace(payload.Reason),
+		OrderID:        payload.OrderID,
+		StageIndex:     payload.StageIndex,
+		TaskKey:        strings.TrimSpace(payload.TaskKey),
+		Prompt:         strings.TrimSpace(payload.Prompt),
+		Provider:       strings.TrimSpace(payload.Provider),
+		Model:          strings.TrimSpace(payload.Model),
+		Runtime:        strings.TrimSpace(payload.Runtime),
+		Skill:          strings.TrimSpace(payload.Skill),
+		Plan:           slices.Clone(payload.Plan),
+		WorktreeName:   strings.TrimSpace(payload.WorktreeName),
+		WorktreePath:   strings.TrimSpace(payload.WorktreePath),
+		BranchName:     strings.TrimSpace(payload.BranchName),
+		BaseBranch:     strings.TrimSpace(payload.BaseBranch),
+		ApprovalAction: strings.TrimSpace(payload.ApprovalAction),
+		SessionID:      strings.TrimSpace(payload.SessionID),
+		Reason:         strings.TrimSpace(payload.Reason),
 	}
 	next.LastEventID = strconv.FormatUint(uint64(event.ID), 10)
 	return next, nil, nil

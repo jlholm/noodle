@@ -310,7 +310,11 @@ func (s *Server) handleReviewDiff(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "review not found", http.StatusNotFound)
 		return
 	}
-	result, err := worktree.DiffWorktreeAgainst(found.WorktreePath, s.integrationBranch)
+	base := s.integrationBranch
+	if strings.TrimSpace(found.BaseBranch) != "" {
+		base = found.BaseBranch
+	}
+	result, err := worktree.DiffWorktreeAgainst(found.WorktreePath, base)
 	if err != nil {
 		// Worktree may have been cleaned up by a concurrent merge/reject.
 		if strings.Contains(err.Error(), "worktree path not found") {

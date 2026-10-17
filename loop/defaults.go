@@ -24,6 +24,14 @@ func (noOpWorktree) Merge(string, ...worktree.MergeOpts) error     { return nil 
 func (noOpWorktree) MergeRemoteBranch(string) error                { return nil }
 func (noOpWorktree) Cleanup(string, ...worktree.CleanupOpts) error { return nil }
 func (noOpWorktree) HasUnmergedCommits(string) (bool, error)       { return false, nil }
+func (noOpWorktree) CurrentBranch() (string, error)                { return "main", nil }
+func (noOpWorktree) CheckedOutBranch(string) (string, error)       { return "", nil }
+func (noOpWorktree) BranchExists(string) bool                      { return false }
+func (noOpWorktree) BranchWorktree(string) (string, bool, error)   { return "", false, nil }
+func (noOpWorktree) CreateBranch(string, string, string) error     { return nil }
+func (noOpWorktree) AttachBranch(string, string) error             { return nil }
+func (noOpWorktree) Clean(string) (bool, error)                    { return true, nil }
+func (noOpWorktree) CommitsAhead(string, string) (bool, error)     { return false, nil }
 
 func defaultDependencies(projectDir, runtimeDir, noodleBin string, cfg config.Config, logger *slog.Logger, sink dispatcher.SessionEventSink) Dependencies {
 	resolver := skill.Resolver{SearchPaths: cfg.Skills.Paths}

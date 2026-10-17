@@ -156,19 +156,22 @@ func projectedPendingReviews(reviews []projection.PendingReviewProjection) []loo
 	items := make([]loop.PendingReviewItem, 0, len(reviews))
 	for _, review := range reviews {
 		items = append(items, loop.PendingReviewItem{
-			OrderID:      review.OrderID,
-			StageIndex:   review.StageIndex,
-			TaskKey:      review.TaskKey,
-			Prompt:       review.Prompt,
-			Provider:     review.Provider,
-			Model:        review.Model,
-			Runtime:      review.Runtime,
-			Skill:        review.Skill,
-			Plan:         append([]string(nil), review.Plan...),
-			WorktreeName: review.WorktreeName,
-			WorktreePath: review.WorktreePath,
-			SessionID:    review.SessionID,
-			Reason:       review.Reason,
+			OrderID:        review.OrderID,
+			StageIndex:     review.StageIndex,
+			TaskKey:        review.TaskKey,
+			Prompt:         review.Prompt,
+			Provider:       review.Provider,
+			Model:          review.Model,
+			Runtime:        review.Runtime,
+			Skill:          review.Skill,
+			Plan:           append([]string(nil), review.Plan...),
+			WorktreeName:   review.WorktreeName,
+			WorktreePath:   review.WorktreePath,
+			BranchName:     review.BranchName,
+			BaseBranch:     review.BaseBranch,
+			ApprovalAction: review.ApprovalAction,
+			SessionID:      review.SessionID,
+			Reason:         review.Reason,
 		})
 	}
 	return items

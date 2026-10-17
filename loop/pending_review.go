@@ -15,21 +15,24 @@ import (
 )
 
 type PendingReviewItem struct {
-	OrderID      string   `json:"order_id"`
-	StageIndex   int      `json:"stage_index"`
-	TaskKey      string   `json:"task_key,omitempty"`
-	Title        string   `json:"title,omitempty"`
-	Prompt       string   `json:"prompt,omitempty"`
-	Provider     string   `json:"provider,omitempty"`
-	Model        string   `json:"model,omitempty"`
-	Runtime      string   `json:"runtime,omitempty"`
-	Skill        string   `json:"skill,omitempty"`
-	Plan         []string `json:"plan,omitempty"`
-	Rationale    string   `json:"rationale,omitempty"`
-	WorktreeName string   `json:"worktree_name"`
-	WorktreePath string   `json:"worktree_path"`
-	SessionID    string   `json:"session_id,omitempty"`
-	Reason       string   `json:"reason,omitempty"`
+	OrderID        string   `json:"order_id"`
+	StageIndex     int      `json:"stage_index"`
+	TaskKey        string   `json:"task_key,omitempty"`
+	Title          string   `json:"title,omitempty"`
+	Prompt         string   `json:"prompt,omitempty"`
+	Provider       string   `json:"provider,omitempty"`
+	Model          string   `json:"model,omitempty"`
+	Runtime        string   `json:"runtime,omitempty"`
+	Skill          string   `json:"skill,omitempty"`
+	Plan           []string `json:"plan,omitempty"`
+	Rationale      string   `json:"rationale,omitempty"`
+	WorktreeName   string   `json:"worktree_name"`
+	WorktreePath   string   `json:"worktree_path"`
+	BranchName     string   `json:"branch_name,omitempty"`
+	BaseBranch     string   `json:"base_branch,omitempty"`
+	ApprovalAction string   `json:"approval_action,omitempty"`
+	SessionID      string   `json:"session_id,omitempty"`
+	Reason         string   `json:"reason,omitempty"`
 }
 
 type pendingReviewFile struct {
@@ -77,20 +80,23 @@ func (l *Loop) writePendingReview() error {
 	items := make([]PendingReviewItem, 0, len(l.canonical.PendingReviews))
 	for _, review := range l.canonical.PendingReviews {
 		items = append(items, PendingReviewItem{
-			OrderID:      review.OrderID,
-			StageIndex:   review.StageIndex,
-			TaskKey:      review.TaskKey,
-			Title:        "",
-			Prompt:       review.Prompt,
-			Provider:     review.Provider,
-			Model:        review.Model,
-			Runtime:      review.Runtime,
-			Skill:        review.Skill,
-			Plan:         append([]string(nil), review.Plan...),
-			WorktreeName: review.WorktreeName,
-			WorktreePath: review.WorktreePath,
-			SessionID:    review.SessionID,
-			Reason:       review.Reason,
+			OrderID:        review.OrderID,
+			StageIndex:     review.StageIndex,
+			TaskKey:        review.TaskKey,
+			Title:          "",
+			Prompt:         review.Prompt,
+			Provider:       review.Provider,
+			Model:          review.Model,
+			Runtime:        review.Runtime,
+			Skill:          review.Skill,
+			Plan:           append([]string(nil), review.Plan...),
+			WorktreeName:   review.WorktreeName,
+			WorktreePath:   review.WorktreePath,
+			BranchName:     review.BranchName,
+			BaseBranch:     review.BaseBranch,
+			ApprovalAction: review.ApprovalAction,
+			SessionID:      review.SessionID,
+			Reason:         review.Reason,
 		})
 	}
 	sort.Slice(items, func(i, j int) bool {
@@ -129,10 +135,13 @@ func (l *Loop) loadPendingReview() error {
 				},
 				plan: append([]string(nil), review.Plan...),
 			},
-			worktreeName: name,
-			worktreePath: strings.TrimSpace(review.WorktreePath),
-			sessionID:    strings.TrimSpace(review.SessionID),
-			reason:       strings.TrimSpace(review.Reason),
+			worktreeName:   name,
+			worktreePath:   strings.TrimSpace(review.WorktreePath),
+			branchName:     strings.TrimSpace(review.BranchName),
+			baseBranch:     strings.TrimSpace(review.BaseBranch),
+			approvalAction: strings.TrimSpace(review.ApprovalAction),
+			sessionID:      strings.TrimSpace(review.SessionID),
+			reason:         strings.TrimSpace(review.Reason),
 		}
 	}
 	l.cooks.pendingReview = next
@@ -212,7 +221,7 @@ func (l *Loop) reviewPayloadForCook(cook *cookHandle, reason string) map[string]
 	if cook.attempt > 0 || cook.session != nil {
 		attemptID = dispatchAttemptID(cook.orderID, cook.stageIndex, cook.attempt)
 	}
-	return map[string]any{
+	payload := map[string]any{
 		"order_id":      cook.orderID,
 		"stage_index":   cook.stageIndex,
 		"attempt_id":    attemptID,
@@ -228,6 +237,12 @@ func (l *Loop) reviewPayloadForCook(cook *cookHandle, reason string) map[string]
 		"skill":         cook.stage.Skill,
 		"plan":          append([]string(nil), cook.plan...),
 	}
+	if ws, ok := l.orderWorkspace(cook.orderID); ok {
+		payload["branch_name"] = ws.BranchName
+		payload["base_branch"] = ws.BaseBranch
+		payload["approval_action"] = approvalActionComplete
+	}
+	return payload
 }
 
 func canonicalStageStatusToLegacy(status state.StageLifecycleStatus) orderx.StageStatus {

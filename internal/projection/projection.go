@@ -230,19 +230,22 @@ func projectPendingReviews(s state.State) []PendingReviewProjection {
 	for _, orderID := range orderIDs {
 		review := s.PendingReviews[orderID]
 		reviews = append(reviews, PendingReviewProjection{
-			OrderID:      review.OrderID,
-			StageIndex:   review.StageIndex,
-			TaskKey:      review.TaskKey,
-			Prompt:       review.Prompt,
-			Provider:     review.Provider,
-			Model:        review.Model,
-			Runtime:      review.Runtime,
-			Skill:        review.Skill,
-			Plan:         append([]string(nil), review.Plan...),
-			WorktreeName: review.WorktreeName,
-			WorktreePath: review.WorktreePath,
-			SessionID:    review.SessionID,
-			Reason:       review.Reason,
+			OrderID:        review.OrderID,
+			StageIndex:     review.StageIndex,
+			TaskKey:        review.TaskKey,
+			Prompt:         review.Prompt,
+			Provider:       review.Provider,
+			Model:          review.Model,
+			Runtime:        review.Runtime,
+			Skill:          review.Skill,
+			Plan:           append([]string(nil), review.Plan...),
+			WorktreeName:   review.WorktreeName,
+			WorktreePath:   review.WorktreePath,
+			BranchName:     review.BranchName,
+			BaseBranch:     review.BaseBranch,
+			ApprovalAction: review.ApprovalAction,
+			SessionID:      review.SessionID,
+			Reason:         review.Reason,
 		})
 	}
 	return reviews
@@ -328,19 +331,22 @@ func clonePendingReviewProjections(reviews []PendingReviewProjection) []PendingR
 	cloned := make([]PendingReviewProjection, 0, len(reviews))
 	for _, review := range reviews {
 		cloned = append(cloned, PendingReviewProjection{
-			OrderID:      review.OrderID,
-			StageIndex:   review.StageIndex,
-			TaskKey:      review.TaskKey,
-			Prompt:       review.Prompt,
-			Provider:     review.Provider,
-			Model:        review.Model,
-			Runtime:      review.Runtime,
-			Skill:        review.Skill,
-			Plan:         append([]string(nil), review.Plan...),
-			WorktreeName: review.WorktreeName,
-			WorktreePath: review.WorktreePath,
-			SessionID:    review.SessionID,
-			Reason:       review.Reason,
+			OrderID:        review.OrderID,
+			StageIndex:     review.StageIndex,
+			TaskKey:        review.TaskKey,
+			Prompt:         review.Prompt,
+			Provider:       review.Provider,
+			Model:          review.Model,
+			Runtime:        review.Runtime,
+			Skill:          review.Skill,
+			Plan:           append([]string(nil), review.Plan...),
+			WorktreeName:   review.WorktreeName,
+			WorktreePath:   review.WorktreePath,
+			BranchName:     review.BranchName,
+			BaseBranch:     review.BaseBranch,
+			ApprovalAction: review.ApprovalAction,
+			SessionID:      review.SessionID,
+			Reason:         review.Reason,
 		})
 	}
 	return cloned

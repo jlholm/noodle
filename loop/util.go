@@ -132,11 +132,12 @@ func hasSyncWarnings(warnings []string) bool {
 	return false
 }
 
-// worktreeResumeContext checks if a worktree has commits ahead of main.
-// Returns a resume hint for the agent prompt, or empty string if the
-// worktree is fresh.
-func worktreeResumeContext(worktreePath, name string) string {
-	out, err := exec.Command("git", "-C", worktreePath, "log", "main..HEAD", "--oneline").Output()
+func worktreeResumeContext(worktreePath, name, base string) string {
+	base = strings.TrimSpace(base)
+	if base == "" {
+		base = "main"
+	}
+	out, err := exec.Command("git", "-C", worktreePath, "log", base+"..HEAD", "--oneline").Output()
 	if err != nil {
 		return ""
 	}

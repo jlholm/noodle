@@ -74,19 +74,22 @@ type SnapshotView struct {
 
 // PendingReviewProjection is the projected view of a pending review item.
 type PendingReviewProjection struct {
-	OrderID      string   `json:"order_id"`
-	StageIndex   int      `json:"stage_index"`
-	TaskKey      string   `json:"task_key,omitempty"`
-	Prompt       string   `json:"prompt,omitempty"`
-	Provider     string   `json:"provider,omitempty"`
-	Model        string   `json:"model,omitempty"`
-	Runtime      string   `json:"runtime,omitempty"`
-	Skill        string   `json:"skill,omitempty"`
-	Plan         []string `json:"plan,omitempty"`
-	WorktreeName string   `json:"worktree_name,omitempty"`
-	WorktreePath string   `json:"worktree_path,omitempty"`
-	SessionID    string   `json:"session_id,omitempty"`
-	Reason       string   `json:"reason,omitempty"`
+	OrderID        string   `json:"order_id"`
+	StageIndex     int      `json:"stage_index"`
+	TaskKey        string   `json:"task_key,omitempty"`
+	Prompt         string   `json:"prompt,omitempty"`
+	Provider       string   `json:"provider,omitempty"`
+	Model          string   `json:"model,omitempty"`
+	Runtime        string   `json:"runtime,omitempty"`
+	Skill          string   `json:"skill,omitempty"`
+	Plan           []string `json:"plan,omitempty"`
+	WorktreeName   string   `json:"worktree_name,omitempty"`
+	WorktreePath   string   `json:"worktree_path,omitempty"`
+	BranchName     string   `json:"branch_name,omitempty"`
+	BaseBranch     string   `json:"base_branch,omitempty"`
+	ApprovalAction string   `json:"approval_action,omitempty"`
+	SessionID      string   `json:"session_id,omitempty"`
+	Reason         string   `json:"reason,omitempty"`
 }
 
 // ProjectionDelta is an incremental websocket update between projection versions.

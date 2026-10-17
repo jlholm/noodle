@@ -62,6 +62,14 @@ func (f *fakeWorktree) HasUnmergedCommits(name string) (bool, error) {
 	}
 	return true, nil
 }
+func (f *fakeWorktree) CurrentBranch() (string, error)              { return "main", nil }
+func (f *fakeWorktree) CheckedOutBranch(string) (string, error)     { return "", nil }
+func (f *fakeWorktree) BranchExists(string) bool                    { return false }
+func (f *fakeWorktree) BranchWorktree(string) (string, bool, error) { return "", false, nil }
+func (f *fakeWorktree) CreateBranch(string, string, string) error   { return nil }
+func (f *fakeWorktree) AttachBranch(string, string) error           { return nil }
+func (f *fakeWorktree) Clean(string) (bool, error)                  { return true, nil }
+func (f *fakeWorktree) CommitsAhead(string, string) (bool, error)   { return false, nil }
 
 type fakeAdapterRunner struct {
 	doneCalls []string

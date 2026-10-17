@@ -61,19 +61,22 @@ func (l *Loop) ensureCanonicalLoadedFromBridge() error {
 			continue
 		}
 		pendingReview = append(pendingReview, PendingReviewItem{
-			OrderID:      pending.orderID,
-			StageIndex:   pending.stageIndex,
-			TaskKey:      pending.stage.TaskKey,
-			Prompt:       pending.stage.Prompt,
-			Provider:     pending.stage.Provider,
-			Model:        pending.stage.Model,
-			Runtime:      pending.stage.Runtime,
-			Skill:        pending.stage.Skill,
-			Plan:         append([]string(nil), pending.plan...),
-			WorktreeName: pending.worktreeName,
-			WorktreePath: pending.worktreePath,
-			SessionID:    pending.sessionID,
-			Reason:       pending.reason,
+			OrderID:        pending.orderID,
+			StageIndex:     pending.stageIndex,
+			TaskKey:        pending.stage.TaskKey,
+			Prompt:         pending.stage.Prompt,
+			Provider:       pending.stage.Provider,
+			Model:          pending.stage.Model,
+			Runtime:        pending.stage.Runtime,
+			Skill:          pending.stage.Skill,
+			Plan:           append([]string(nil), pending.plan...),
+			WorktreeName:   pending.worktreeName,
+			WorktreePath:   pending.worktreePath,
+			BranchName:     pending.branchName,
+			BaseBranch:     pending.baseBranch,
+			ApprovalAction: pending.approvalAction,
+			SessionID:      pending.sessionID,
+			Reason:         pending.reason,
 		})
 	}
 	now := timeNowUTC(l.deps.Now)

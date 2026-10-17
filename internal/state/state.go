@@ -100,6 +100,14 @@ type OrderNode struct {
 	CreatedAt time.Time            `json:"created_at"`
 	UpdatedAt time.Time            `json:"updated_at"`
 	Metadata  map[string]string    `json:"metadata"`
+	Workspace *OrderWorkspace      `json:"workspace,omitempty"`
+}
+
+// OrderWorkspace is the checkout bound to an order. Names stay fixed after the first bind.
+type OrderWorkspace struct {
+	WorktreeName string `json:"worktree_name"`
+	BranchName   string `json:"branch_name"`
+	BaseBranch   string `json:"base_branch"`
 }
 
 // StageNode represents a stage within an order.
@@ -141,19 +149,22 @@ type MergeRecoveryNode struct {
 
 // PendingReviewNode records a stage parked for human review.
 type PendingReviewNode struct {
-	OrderID      string   `json:"order_id"`
-	StageIndex   int      `json:"stage_index"`
-	TaskKey      string   `json:"task_key"`
-	Prompt       string   `json:"prompt"`
-	Provider     string   `json:"provider"`
-	Model        string   `json:"model"`
-	Runtime      string   `json:"runtime"`
-	Skill        string   `json:"skill"`
-	Plan         []string `json:"plan"`
-	WorktreeName string   `json:"worktree_name"`
-	WorktreePath string   `json:"worktree_path"`
-	SessionID    string   `json:"session_id"`
-	Reason       string   `json:"reason"`
+	OrderID        string   `json:"order_id"`
+	StageIndex     int      `json:"stage_index"`
+	TaskKey        string   `json:"task_key"`
+	Prompt         string   `json:"prompt"`
+	Provider       string   `json:"provider"`
+	Model          string   `json:"model"`
+	Runtime        string   `json:"runtime"`
+	Skill          string   `json:"skill"`
+	Plan           []string `json:"plan"`
+	WorktreeName   string   `json:"worktree_name"`
+	WorktreePath   string   `json:"worktree_path"`
+	BranchName     string   `json:"branch_name,omitempty"`
+	BaseBranch     string   `json:"base_branch,omitempty"`
+	ApprovalAction string   `json:"approval_action,omitempty"`
+	SessionID      string   `json:"session_id"`
+	Reason         string   `json:"reason"`
 }
 
 // IsTerminal reports whether the order status is terminal
@@ -233,6 +244,10 @@ func (s State) Clone() State {
 				metadataCopy[key] = value
 			}
 			orderCopy.Metadata = metadataCopy
+		}
+		if order.Workspace != nil {
+			workspaceCopy := *order.Workspace
+			orderCopy.Workspace = &workspaceCopy
 		}
 
 		if order.Stages != nil {

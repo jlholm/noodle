@@ -37,6 +37,12 @@ func (l *Loop) recordStageFailure(cook *cookHandle, reason string, orderClass Or
 
 // cleanupCookWorktree removes the cook's worktree if it has a non-empty name.
 func (l *Loop) cleanupCookWorktree(cook *cookHandle) {
+	if cook == nil {
+		return
+	}
+	if _, bound := l.orderWorkspace(cook.orderID); bound {
+		return
+	}
 	if strings.TrimSpace(cook.worktreeName) != "" {
 		_ = l.deps.Worktree.Cleanup(cook.worktreeName, worktree.CleanupOpts{Force: true})
 	}

@@ -127,6 +127,13 @@ func (l *Loop) handleCompletion(ctx context.Context, cook *cookHandle, resultSta
 		if blocked {
 			return nil
 		}
+		if l.branchModeEnabled() && !isScheduleBootstrapOrder(Order{ID: cook.orderID}) {
+			ws, ok := l.orderWorkspace(cook.orderID)
+			if !ok {
+				return l.failStage(ctx, cook, fmt.Sprintf("order %s workspace missing", cook.orderID))
+			}
+			return l.completeBranchWorkspace(ctx, cook, ws, msg)
+		}
 		canMerge, err := l.worktreeHasChanges(cook)
 		if err != nil {
 			return l.failStage(ctx, cook, fmt.Sprintf("merge check: %v", err))
