@@ -1,11 +1,54 @@
 package worktree
 
 import (
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestNewAppUsesCheckedOutBranchAsIntegrationBranch(t *testing.T) {
+	skipWorktreeIntegrationShort(t)
+
+	dir := setupTestRepo(t)
+	runGitIn(t, dir, "checkout", "-b", "feature/pilot")
+
+	originalDir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(dir); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(originalDir) })
+
+	app, err := NewApp()
+	if err != nil {
+		t.Fatalf("NewApp failed: %v", err)
+	}
+	if app.IntegrationBranch != "feature/pilot" {
+		t.Fatalf("IntegrationBranch = %q, want %q", app.IntegrationBranch, "feature/pilot")
+	}
+
+	if err := app.Create("pilot-work"); err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+	worktreePath := WorktreePath(dir, "pilot-work")
+	writeFile(t, filepath.Join(worktreePath, "pilot.txt"), "feature branch work")
+	runGitIn(t, worktreePath, "add", "pilot.txt")
+	runGitIn(t, worktreePath, "commit", "-m", "add pilot work")
+
+	if err := app.Merge("pilot-work"); err != nil {
+		t.Fatalf("Merge failed: %v", err)
+	}
+	if !fileExists(filepath.Join(dir, "pilot.txt")) {
+		t.Fatal("merged file not found on feature branch")
+	}
+	if got := strings.TrimSpace(gitOutputIn(t, dir, "branch", "--show-current")); got != "feature/pilot" {
+		t.Fatalf("current branch = %q, want %q", got, "feature/pilot")
+	}
+}
 
 func TestIntegrationBranchExplicit(t *testing.T) {
 	t.Parallel()

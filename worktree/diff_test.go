@@ -77,3 +77,29 @@ func TestDiffWorktree_NonexistentPath(t *testing.T) {
 		t.Errorf("error should mention 'not found', got: %v", err)
 	}
 }
+
+func TestDiffWorktreeAgainstFeatureBranch(t *testing.T) {
+	skipWorktreeIntegrationShort(t)
+
+	dir := setupTestRepo(t)
+	runGitIn(t, dir, "checkout", "-b", "feature/pilot")
+	writeFile(t, filepath.Join(dir, "pilot.txt"), "integration branch content")
+	runGitIn(t, dir, "add", "pilot.txt")
+	runGitIn(t, dir, "commit", "-m", "add pilot content")
+
+	runGitIn(t, dir, "checkout", "-b", "noodle/task")
+	writeFile(t, filepath.Join(dir, "task.txt"), "task content")
+	runGitIn(t, dir, "add", "task.txt")
+	runGitIn(t, dir, "commit", "-m", "add task content")
+
+	result, err := DiffWorktreeAgainst(dir, "feature/pilot")
+	if err != nil {
+		t.Fatalf("DiffWorktreeAgainst: %v", err)
+	}
+	if !strings.Contains(result.Diff, "task.txt") {
+		t.Fatalf("diff should include task.txt, got:\n%s", result.Diff)
+	}
+	if strings.Contains(result.Diff, "pilot.txt") {
+		t.Fatalf("diff should exclude integration branch changes, got:\n%s", result.Diff)
+	}
+}

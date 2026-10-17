@@ -34,6 +34,7 @@ type Options struct {
 	LoopStateProvider LoopStateProvider
 	Warnings          []string
 	Broker            *SessionEventBroker
+	IntegrationBranch string
 }
 
 type LoopStateProvider interface {
@@ -42,15 +43,16 @@ type LoopStateProvider interface {
 
 // Server serves the web UI API.
 type Server struct {
-	runtimeDir string
-	now        func() time.Time
-	httpServer *http.Server
-	listener   net.Listener
-	ws         *wsHub
-	config     config.Config
-	provider   LoopStateProvider
-	warnings   []string
-	ready      chan struct{}
+	runtimeDir        string
+	now               func() time.Time
+	httpServer        *http.Server
+	listener          net.Listener
+	ws                *wsHub
+	config            config.Config
+	provider          LoopStateProvider
+	warnings          []string
+	ready             chan struct{}
+	integrationBranch string
 }
 
 // New creates a Server but does not start it.
@@ -79,13 +81,14 @@ func New(opts Options) *Server {
 	}
 
 	s := &Server{
-		runtimeDir: runtimeDir,
-		now:        now,
-		ws:         newWSHub(broker),
-		config:     cfg,
-		provider:   opts.LoopStateProvider,
-		warnings:   opts.Warnings,
-		ready:      make(chan struct{}),
+		runtimeDir:        runtimeDir,
+		now:               now,
+		ws:                newWSHub(broker),
+		config:            cfg,
+		provider:          opts.LoopStateProvider,
+		warnings:          opts.Warnings,
+		ready:             make(chan struct{}),
+		integrationBranch: strings.TrimSpace(opts.IntegrationBranch),
 	}
 
 	mux := http.NewServeMux()
@@ -307,7 +310,7 @@ func (s *Server) handleReviewDiff(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "review not found", http.StatusNotFound)
 		return
 	}
-	result, err := worktree.DiffWorktree(found.WorktreePath)
+	result, err := worktree.DiffWorktreeAgainst(found.WorktreePath, s.integrationBranch)
 	if err != nil {
 		// Worktree may have been cleaned up by a concurrent merge/reject.
 		if strings.Contains(err.Error(), "worktree path not found") {

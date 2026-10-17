@@ -17,6 +17,12 @@ type DiffResult struct {
 // DiffWorktree computes the diff between the worktree's branch HEAD and the
 // base branch (auto-discovered from origin/HEAD, falling back to "main").
 func DiffWorktree(worktreePath string) (DiffResult, error) {
+	return DiffWorktreeAgainst(worktreePath, "")
+}
+
+// DiffWorktreeAgainst computes the diff between the worktree's branch HEAD and
+// base. An empty base preserves the default-branch discovery behavior.
+func DiffWorktreeAgainst(worktreePath, base string) (DiffResult, error) {
 	if _, err := os.Stat(worktreePath); err != nil {
 		return DiffResult{}, fmt.Errorf("worktree path not found: %s", worktreePath)
 	}
@@ -26,7 +32,13 @@ func DiffWorktree(worktreePath string) (DiffResult, error) {
 		return DiffResult{}, fmt.Errorf("resolve absolute path: %w", err)
 	}
 
-	base := discoverBaseBranch(absPath)
+	base = strings.TrimSpace(base)
+	if base == "" {
+		base = discoverBaseBranch(absPath)
+	}
+	if strings.HasPrefix(base, "-") {
+		return DiffResult{}, fmt.Errorf("invalid base branch %q", base)
+	}
 
 	diff, err := gitOutput(absPath, "diff", "--no-ext-diff", "--no-textconv", base+"...HEAD")
 	if err != nil {

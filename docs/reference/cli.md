@@ -23,6 +23,11 @@ noodle start [flags]
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--once` | bool | `false` | Run one scheduling cycle and exit |
+| `--integration-branch` | string | checked-out branch | Branch that receives completed work |
+
+Noodle pins the integration branch when the loop starts. Worktrees are created
+from that branch, review diffs compare against it, and completed work merges
+back into it. The integration branch must be checked out in the project root.
 
 ---
 
