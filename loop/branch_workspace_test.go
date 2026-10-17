@@ -2,6 +2,7 @@ package loop
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"log/slog"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/poteto/noodle/config"
+	"github.com/poteto/noodle/event"
 	loopruntime "github.com/poteto/noodle/runtime"
 	"github.com/poteto/noodle/worktree"
 )
@@ -601,6 +603,63 @@ func (e *gitLoopEnv) complete(status string) {
 	}
 	if n == 0 {
 		e.t.Fatal("no running session")
+	}
+}
+
+func (e *gitLoopEnv) adopt(orderID string) {
+	e.t.Helper()
+	e.rt.mu.Lock()
+	var session *mockSession
+	for _, candidate := range e.rt.sessions {
+		if candidate.Status() == "running" {
+			session = candidate
+		}
+	}
+	e.rt.mu.Unlock()
+	if session == nil {
+		e.t.Fatal("no running session")
+	}
+	delete(e.loop.cooks.activeCooksByOrder, orderID)
+	if e.loop.cooks.adoptedTargets == nil {
+		e.loop.cooks.adoptedTargets = map[string]string{}
+	}
+	e.loop.cooks.adoptedTargets[orderID] = session.ID()
+	metaDir := filepath.Join(e.loop.runtimeDir, "sessions", session.ID())
+	if err := os.MkdirAll(metaDir, 0o755); err != nil {
+		e.t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(metaDir, "meta.json"), []byte(`{"status":"completed"}`), 0o644); err != nil {
+		e.t.Fatal(err)
+	}
+}
+
+func (e *gitLoopEnv) emitStageMessage(message string, blocking bool) {
+	e.t.Helper()
+	e.rt.mu.Lock()
+	sessionID := ""
+	for _, session := range e.rt.sessions {
+		if session.Status() == "running" {
+			sessionID = session.ID()
+		}
+	}
+	e.rt.mu.Unlock()
+	if sessionID == "" {
+		e.t.Fatal("no running session")
+	}
+	writer, err := event.NewEventWriter(e.loop.runtimeDir, sessionID)
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	payload, err := json.Marshal(event.StageMessagePayload{Message: message, Blocking: &blocking})
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	if err := writer.Append(context.Background(), event.Event{
+		Type:      event.EventStageMessage,
+		Payload:   payload,
+		SessionID: sessionID,
+	}); err != nil {
+		e.t.Fatal(err)
 	}
 }
 

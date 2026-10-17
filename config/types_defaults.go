@@ -137,18 +137,19 @@ type ConfigDiagnostic struct {
 }
 
 const (
-	DiagnosticCodeRoutingDefaultsMissing = "routing_defaults_missing"
-	DiagnosticCodeAgentDirMissing        = "agent_dir_missing"
-	DiagnosticCodeAdapterSkillMissing    = "adapter_skill_missing"
-	DiagnosticCodeAdapterScriptEmpty     = "adapter_script_empty"
-	DiagnosticCodeAdapterScriptMissing   = "adapter_script_missing"
-	DiagnosticCodeProviderUnknown        = "provider_unknown"
-	DiagnosticCodeRuntimeDefaultUnknown  = "runtime_default_unknown"
-	DiagnosticCodeNoBacklogAdapter       = "no_backlog_adapter"
-	DiagnosticCodeConfigFieldRemoved     = "config_field_removed"
-	DiagnosticCodeConfigFieldUnknown     = "config_field_unknown"
-	DiagnosticCodeConfigValueNormalized  = "config_value_normalized"
-	DiagnosticCodeGitCompletionUnknown   = "git_completion_unknown"
+	DiagnosticCodeRoutingDefaultsMissing  = "routing_defaults_missing"
+	DiagnosticCodeAgentDirMissing         = "agent_dir_missing"
+	DiagnosticCodeAdapterSkillMissing     = "adapter_skill_missing"
+	DiagnosticCodeAdapterScriptEmpty      = "adapter_script_empty"
+	DiagnosticCodeAdapterScriptMissing    = "adapter_script_missing"
+	DiagnosticCodeProviderUnknown         = "provider_unknown"
+	DiagnosticCodeRuntimeDefaultUnknown   = "runtime_default_unknown"
+	DiagnosticCodeNoBacklogAdapter        = "no_backlog_adapter"
+	DiagnosticCodeConfigFieldRemoved      = "config_field_removed"
+	DiagnosticCodeConfigFieldUnknown      = "config_field_unknown"
+	DiagnosticCodeConfigValueNormalized   = "config_value_normalized"
+	DiagnosticCodeGitCompletionUnknown    = "git_completion_unknown"
+	DiagnosticCodeGitBranchPatternInvalid = "git_branch_pattern_invalid"
 )
 
 type ValidationResult struct {

@@ -756,3 +756,59 @@ completion = "pull_request"
 		t.Fatalf("fatals = %#v", result.Fatals())
 	}
 }
+
+func TestGitBranchPatternValidation(t *testing.T) {
+	valid := []string{
+		"",
+		"work/{todo_id}",
+		"noodle/{todo_id}-{slug}",
+		"{todo_id}/{slug}",
+	}
+	for _, pattern := range valid {
+		t.Run("valid "+pattern, func(t *testing.T) {
+			body := "[routing.defaults]\nprovider = \"claude\"\nmodel = \"claude-opus-4-6\"\n"
+			if pattern != "" {
+				body += "[git]\nbranch_pattern = \"" + pattern + "\"\n"
+			}
+			cfg, err := Parse([]byte(body))
+			if err != nil {
+				t.Fatalf("Parse: %v", err)
+			}
+			if !Validate(cfg).CanSpawn() {
+				t.Fatalf("pattern %q fatals = %#v", pattern, Validate(cfg).Fatals())
+			}
+		})
+	}
+
+	invalid := []string{
+		"{slug}",
+		"fixed-name",
+		"{todo_id",
+		"{unknown}",
+		"{}",
+		"../{todo_id}",
+		"{todo_id}..{slug}",
+		"{todo_id}.lock",
+	}
+	for _, pattern := range invalid {
+		t.Run("invalid "+pattern, func(t *testing.T) {
+			cfg, err := Parse([]byte("[git]\nbranch_pattern = \"" + pattern + "\"\n"))
+			if err != nil {
+				t.Fatalf("Parse: %v", err)
+			}
+			result := Validate(cfg)
+			if result.CanSpawn() {
+				t.Fatalf("pattern %q should be fatal", pattern)
+			}
+			found := false
+			for _, diagnostic := range result.Fatals() {
+				if diagnostic.Code == DiagnosticCodeGitBranchPatternInvalid && diagnostic.FieldPath == "git.branch_pattern" {
+					found = true
+				}
+			}
+			if !found {
+				t.Fatalf("fatals = %#v", result.Fatals())
+			}
+		})
+	}
+}
