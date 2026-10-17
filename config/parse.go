@@ -105,6 +105,17 @@ func applyDefaultsFromMetadata(config *Config, metadata toml.MetaData, diagnosti
 		config.Server.Port = defaultServerPort
 	}
 
+	if !metadata.IsDefined("git", "completion") {
+		config.Git.Completion = GitCompletionMerge
+	} else {
+		config.Git.Completion = stringx.Normalize(config.Git.Completion)
+	}
+	if !metadata.IsDefined("git", "branch_pattern") || strings.TrimSpace(config.Git.BranchPattern) == "" {
+		config.Git.BranchPattern = DefaultBranchPattern
+	} else {
+		config.Git.BranchPattern = strings.TrimSpace(config.Git.BranchPattern)
+	}
+
 	if metadata.IsDefined("adapters") {
 		if config.Adapters == nil {
 			config.Adapters = map[string]AdapterConfig{}

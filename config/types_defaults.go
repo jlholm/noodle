@@ -21,6 +21,19 @@ type Config struct {
 	Agents      AgentsConfig             `toml:"agents"`
 	Runtime     RuntimeConfig            `toml:"runtime"`
 	Server      ServerConfig             `toml:"server"`
+	Git         GitConfig                `toml:"git"`
+}
+
+const (
+	GitCompletionMerge   = "merge"
+	GitCompletionBranch  = "branch"
+	DefaultBranchPattern = "noodle/{todo_id}-{slug}"
+)
+
+// GitConfig chooses how finished order work is integrated.
+type GitConfig struct {
+	Completion    string `toml:"completion"`
+	BranchPattern string `toml:"branch_pattern"`
 }
 
 type AdapterConfig struct {
@@ -135,6 +148,7 @@ const (
 	DiagnosticCodeConfigFieldRemoved     = "config_field_removed"
 	DiagnosticCodeConfigFieldUnknown     = "config_field_unknown"
 	DiagnosticCodeConfigValueNormalized  = "config_value_normalized"
+	DiagnosticCodeGitCompletionUnknown   = "git_completion_unknown"
 )
 
 type ValidationResult struct {
@@ -193,6 +207,10 @@ func DefaultConfig() Config {
 		},
 		Server: ServerConfig{
 			Port: 3000,
+		},
+		Git: GitConfig{
+			Completion:    GitCompletionMerge,
+			BranchPattern: DefaultBranchPattern,
 		},
 	}
 }

@@ -76,6 +76,18 @@ func Validate(config Config) ValidationResult {
 	appendAgentDirDiagnostic("agents.claude.path", config.Agents.Claude.Path)
 	appendAgentDirDiagnostic("agents.codex.path", config.Agents.Codex.Path)
 
+	switch config.Git.Completion {
+	case GitCompletionMerge, GitCompletionBranch:
+	default:
+		result.Diagnostics = append(result.Diagnostics, ConfigDiagnostic{
+			FieldPath: "git.completion",
+			Message:   fmt.Sprintf("unknown git completion %q (valid: merge, branch)", config.Git.Completion),
+			Severity:  DiagnosticSeverityFatal,
+			Fix:       "Set git.completion to \"merge\" or \"branch\" in .noodle.toml.",
+			Code:      DiagnosticCodeGitCompletionUnknown,
+		})
+	}
+
 	if _, hasBacklog := config.Adapters["backlog"]; !hasBacklog {
 		result.Diagnostics = append(result.Diagnostics, ConfigDiagnostic{
 			FieldPath: "adapters.backlog",

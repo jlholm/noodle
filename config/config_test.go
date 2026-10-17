@@ -31,6 +31,12 @@ func TestDefaultConfigValues(t *testing.T) {
 	if config.Runtime.Default != "process" {
 		t.Fatalf("runtime.default = %q, want process", config.Runtime.Default)
 	}
+	if config.Git.Completion != GitCompletionMerge {
+		t.Fatalf("git.completion = %q, want %q", config.Git.Completion, GitCompletionMerge)
+	}
+	if config.Git.BranchPattern != DefaultBranchPattern {
+		t.Fatalf("git.branch_pattern = %q, want %q", config.Git.BranchPattern, DefaultBranchPattern)
+	}
 	if config.Runtime.Process.MaxConcurrent != 4 {
 		t.Fatalf("runtime.process.max_concurrent default = %d, want 4", config.Runtime.Process.MaxConcurrent)
 	}
@@ -689,5 +695,64 @@ func TestMaxConcurrentForLookup(t *testing.T) {
 		if got := rc.MaxConcurrentFor(tt.name); got != tt.want {
 			t.Errorf("MaxConcurrentFor(%q) = %d, want %d", tt.name, got, tt.want)
 		}
+	}
+}
+
+func TestGitCompletionConfig(t *testing.T) {
+	omitted, err := Parse([]byte(`
+[routing.defaults]
+provider = "claude"
+model = "claude-opus-4-6"
+`))
+	if err != nil {
+		t.Fatalf("Parse omitted git: %v", err)
+	}
+	if omitted.Git.Completion != GitCompletionMerge || omitted.Git.BranchPattern != DefaultBranchPattern {
+		t.Fatalf("omitted git = %#v", omitted.Git)
+	}
+	if !Validate(omitted).CanSpawn() {
+		t.Fatal("omitted git completion should spawn")
+	}
+
+	branch, err := Parse([]byte(`
+[git]
+completion = "BRANCH"
+branch_pattern = "work/{todo_id}"
+`))
+	if err != nil {
+		t.Fatalf("Parse branch git: %v", err)
+	}
+	if branch.Git.Completion != GitCompletionBranch {
+		t.Fatalf("completion = %q", branch.Git.Completion)
+	}
+	if branch.Git.BranchPattern != "work/{todo_id}" {
+		t.Fatalf("branch_pattern = %q", branch.Git.BranchPattern)
+	}
+	if !Validate(branch).CanSpawn() {
+		t.Fatal("branch completion should spawn")
+	}
+
+	rejected, err := Parse([]byte(`
+[git]
+completion = "pull_request"
+`))
+	if err != nil {
+		t.Fatalf("Parse pull_request: %v", err)
+	}
+	if rejected.Git.Completion != "pull_request" {
+		t.Fatalf("completion = %q, want the rejected value kept", rejected.Git.Completion)
+	}
+	result := Validate(rejected)
+	if result.CanSpawn() {
+		t.Fatal("pull_request completion should be fatal")
+	}
+	found := false
+	for _, diagnostic := range result.Fatals() {
+		if diagnostic.Code == DiagnosticCodeGitCompletionUnknown && diagnostic.FieldPath == "git.completion" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("fatals = %#v", result.Fatals())
 	}
 }
