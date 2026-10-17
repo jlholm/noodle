@@ -43,4 +43,38 @@ describe("ReviewList", () => {
     expect(screen.getByText(/Quality Review:/)).toBeInTheDocument();
     expect(screen.getByText("o-1")).toBeInTheDocument();
   });
+
+  it("labels a branch workspace review as complete and shows its branch", () => {
+    mockSnapshot = buildSnapshot({
+      pending_reviews: [
+        buildReview({
+          order_id: "42",
+          approval_action: "complete",
+          branch_name: "noodle/42-fix-login",
+          base_branch: "develop",
+        }),
+      ],
+      pending_review_count: 1,
+    });
+
+    render(<ReviewList />);
+
+    expect(screen.getByRole("button", { name: "Approve & Complete" })).toBeInTheDocument();
+    expect(screen.getByText("noodle/42-fix-login")).toBeInTheDocument();
+    expect(screen.getByText("develop")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Approve & Complete" }));
+    expect(mockMutate).toHaveBeenCalledWith({ action: "merge", order_id: "42" });
+  });
+
+  it("keeps merge approval copy when the review has no completion action", () => {
+    mockSnapshot = buildSnapshot({
+      pending_reviews: [buildReview({ order_id: "7" })],
+      pending_review_count: 1,
+    });
+
+    render(<ReviewList />);
+
+    expect(screen.getByRole("button", { name: "Approve & Merge" })).toBeInTheDocument();
+    expect(screen.queryByText("Branch")).not.toBeInTheDocument();
+  });
 });

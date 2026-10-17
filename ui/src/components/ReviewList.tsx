@@ -72,6 +72,10 @@ function ReviewActions({ review }: { review: PendingReviewItem }) {
     requestChangesLabel = "Send";
   }
 
+  const completesOrder = review.approval_action === "complete";
+  const approveLabel = completesOrder ? "Approve & Complete" : "Approve & Merge";
+  const approvePendingLabel = completesOrder ? "Completing…" : "Merging…";
+
   return (
     <aside className="context-panel">
       <div className="context-header">Review Actions</div>
@@ -93,6 +97,18 @@ function ReviewActions({ review }: { review: PendingReviewItem }) {
           <div className="review-meta-item">
             <span className="review-meta-label">Worktree</span>
             <span className="review-meta-value">{review.worktree_name}</span>
+          </div>
+        )}
+        {review.branch_name && (
+          <div className="review-meta-item">
+            <span className="review-meta-label">Branch</span>
+            <span className="review-meta-value">{review.branch_name}</span>
+          </div>
+        )}
+        {review.base_branch && (
+          <div className="review-meta-item">
+            <span className="review-meta-label">Base</span>
+            <span className="review-meta-value">{review.base_branch}</span>
           </div>
         )}
       </div>
@@ -124,7 +140,7 @@ function ReviewActions({ review }: { review: PendingReviewItem }) {
           onClick={handleMerge}
           disabled={isPending}
         >
-          {isPending ? "Merging…" : "Approve & Merge"}
+          {isPending ? approvePendingLabel : approveLabel}
         </button>
         <div className="review-action-row">
           <button
