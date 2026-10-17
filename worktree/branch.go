@@ -40,6 +40,9 @@ func (a *App) BranchWorktree(branch string) (string, bool, error) {
 	if branch == "" {
 		return "", false, fmt.Errorf("branch name missing")
 	}
+	if err := a.pruneMissingWorktrees(); err != nil {
+		return "", false, err
+	}
 	out, err := a.gitOutput("worktree", "list", "--porcelain")
 	if err != nil {
 		return "", false, fmt.Errorf("list worktrees: %w", err)
@@ -58,6 +61,13 @@ func (a *App) BranchWorktree(branch string) (string, bool, error) {
 		}
 	}
 	return "", false, nil
+}
+
+func (a *App) pruneMissingWorktrees() error {
+	if err := a.git("worktree", "prune", "--expire", "now").Run(); err != nil {
+		return fmt.Errorf("prune worktrees: %w", err)
+	}
+	return nil
 }
 
 // CreateBranch adds a worktree named name on a new branch starting at base.

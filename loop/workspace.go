@@ -48,33 +48,61 @@ func (l *Loop) orderWorkspace(orderID string) (state.OrderWorkspace, bool) {
 	return ws, true
 }
 
+func (l *Loop) usesOrderWorkspace(orderID, worktreeName string) (state.OrderWorkspace, bool) {
+	ws, ok := l.orderWorkspace(orderID)
+	if !ok || strings.TrimSpace(worktreeName) != ws.WorktreeName {
+		return state.OrderWorkspace{}, false
+	}
+	return ws, true
+}
+
 func (l *Loop) ensureOrderWorkspace(order Order) (state.OrderWorkspace, error) {
 	if err := l.ensureCanonicalOrderFromOrders(order.ID); err != nil {
 		return state.OrderWorkspace{}, err
 	}
-	if ws, ok := l.orderWorkspace(order.ID); ok {
-		if err := l.materializeWorkspace(ws); err != nil {
+	ws, bound := l.orderWorkspace(order.ID)
+	if !bound {
+		base, err := l.deps.Worktree.CurrentBranch()
+		if err != nil {
 			return state.OrderWorkspace{}, err
 		}
-		return ws, nil
+		ws = state.OrderWorkspace{
+			WorktreeName: orderWorktreeName(order.ID),
+			BranchName:   renderBranchPattern(l.config.Git.BranchPattern, order.ID, order.Title),
+			BaseBranch:   base,
+		}
 	}
-
-	base, err := l.deps.Worktree.CurrentBranch()
-	if err != nil {
+	if err := config.ValidateBranchRef(ws.BranchName); err != nil {
 		return state.OrderWorkspace{}, err
 	}
-	ws := state.OrderWorkspace{
-		WorktreeName: orderWorktreeName(order.ID),
-		BranchName:   renderBranchPattern(l.config.Git.BranchPattern, order.ID, order.Title),
-		BaseBranch:   base,
+	if err := l.rejectSharedWorkspace(order.ID, ws); err != nil {
+		return state.OrderWorkspace{}, err
 	}
 	if err := l.materializeWorkspace(ws); err != nil {
 		return state.OrderWorkspace{}, err
 	}
-	if err := l.storeOrderWorkspace(order.ID, ws); err != nil {
-		return state.OrderWorkspace{}, err
+	if !bound {
+		if err := l.storeOrderWorkspace(order.ID, ws); err != nil {
+			return state.OrderWorkspace{}, err
+		}
 	}
 	return ws, nil
+}
+
+func (l *Loop) rejectSharedWorkspace(orderID string, ws state.OrderWorkspace) error {
+	for id, node := range l.canonical.Orders {
+		if id == orderID || node.Workspace == nil {
+			continue
+		}
+		other := *node.Workspace
+		if ws.WorktreeName != "" && other.WorktreeName == ws.WorktreeName {
+			return fmt.Errorf("worktree name %s is already used by order %s", ws.WorktreeName, id)
+		}
+		if ws.BranchName != "" && other.BranchName == ws.BranchName {
+			return fmt.Errorf("branch %s is already used by order %s", ws.BranchName, id)
+		}
+	}
+	return nil
 }
 
 func (l *Loop) storeOrderWorkspace(orderID string, ws state.OrderWorkspace) error {
@@ -200,6 +228,25 @@ func (l *Loop) approveBranchWorkspace(pending *pendingReviewCook) error {
 		worktreePath: path,
 		session:      &adoptedSession{id: pending.sessionID, status: "completed"},
 	}
+	return l.finishWorkspaceReview(cook)
+}
+
+func (l *Loop) continueWorkspaceStage(pending *pendingReviewCook) error {
+	path := strings.TrimSpace(pending.worktreePath)
+	if path == "" {
+		path = l.worktreePath(pending.worktreeName)
+	}
+	cook := &cookHandle{
+		cookIdentity: pending.cookIdentity,
+		orderStatus:  OrderStatusActive,
+		worktreeName: pending.worktreeName,
+		worktreePath: path,
+		session:      &adoptedSession{id: pending.sessionID, status: "completed"},
+	}
+	return l.finishWorkspaceReview(cook)
+}
+
+func (l *Loop) finishWorkspaceReview(cook *cookHandle) error {
 	if err := l.emitEventChecked(ingest.EventStageCompleted, l.mergeLifecyclePayload(cook, false)); err != nil {
 		return err
 	}

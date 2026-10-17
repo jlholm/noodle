@@ -237,10 +237,12 @@ func (l *Loop) reviewPayloadForCook(cook *cookHandle, reason string) map[string]
 		"skill":         cook.stage.Skill,
 		"plan":          append([]string(nil), cook.plan...),
 	}
-	if ws, ok := l.orderWorkspace(cook.orderID); ok {
+	if ws, ok := l.usesOrderWorkspace(cook.orderID, cook.worktreeName); ok {
 		payload["branch_name"] = ws.BranchName
 		payload["base_branch"] = ws.BaseBranch
-		payload["approval_action"] = approvalActionComplete
+		if l.stageIsFinal(cook) {
+			payload["approval_action"] = approvalActionComplete
+		}
 	}
 	return payload
 }

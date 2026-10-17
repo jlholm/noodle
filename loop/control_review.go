@@ -21,8 +21,11 @@ func (l *Loop) controlMerge(orderID string) error {
 	if err := l.ensureCanonicalOrderFromOrders(orderID); err != nil {
 		return err
 	}
-	if pending.approvalAction == approvalActionComplete {
-		return l.approveBranchWorkspace(pending)
+	if _, using := l.usesOrderWorkspace(orderID, pending.worktreeName); using {
+		if l.stageIsFinal(&cookHandle{cookIdentity: pending.cookIdentity}) {
+			return l.approveBranchWorkspace(pending)
+		}
+		return l.continueWorkspaceStage(pending)
 	}
 
 	// Merge the worktree.
@@ -89,7 +92,7 @@ func (l *Loop) controlReject(orderID string) error {
 	if err := l.ensureCanonicalOrderFromOrders(orderID); err != nil {
 		return err
 	}
-	if _, bound := l.orderWorkspace(orderID); !bound && strings.TrimSpace(pending.worktreeName) != "" {
+	if _, using := l.usesOrderWorkspace(orderID, pending.worktreeName); !using && strings.TrimSpace(pending.worktreeName) != "" {
 		_ = l.deps.Worktree.Cleanup(pending.worktreeName, worktree.CleanupOpts{Force: true})
 	}
 	if err := l.emitEventChecked(ingest.EventStageReviewRejected, map[string]any{

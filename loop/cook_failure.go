@@ -40,7 +40,7 @@ func (l *Loop) cleanupCookWorktree(cook *cookHandle) {
 	if cook == nil {
 		return
 	}
-	if _, bound := l.orderWorkspace(cook.orderID); bound {
+	if _, using := l.usesOrderWorkspace(cook.orderID, cook.worktreeName); using {
 		return
 	}
 	if strings.TrimSpace(cook.worktreeName) != "" {

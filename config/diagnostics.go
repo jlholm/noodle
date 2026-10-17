@@ -87,6 +87,15 @@ func Validate(config Config) ValidationResult {
 			Code:      DiagnosticCodeGitCompletionUnknown,
 		})
 	}
+	if err := ValidateBranchPattern(config.Git.BranchPattern); err != nil {
+		result.Diagnostics = append(result.Diagnostics, ConfigDiagnostic{
+			FieldPath: "git.branch_pattern",
+			Message:   err.Error(),
+			Severity:  DiagnosticSeverityFatal,
+			Fix:       "Set git.branch_pattern to a Git branch template that includes {todo_id}. {slug} is the only other placeholder.",
+			Code:      DiagnosticCodeGitBranchPatternInvalid,
+		})
+	}
 
 	if _, hasBacklog := config.Adapters["backlog"]; !hasBacklog {
 		result.Diagnostics = append(result.Diagnostics, ConfigDiagnostic{
