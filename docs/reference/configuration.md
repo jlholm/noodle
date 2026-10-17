@@ -82,6 +82,31 @@ Each agent consumes tokens independently. `max_concurrency = 4` means up to four
 
 ---
 
+### `[git]`
+
+Controls the Git checkout for an order.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `completion` | string | `"merge"` | `merge` merges each stage into the checked-out integration branch and removes that stage worktree. `branch` keeps one worktree and one branch for the order. |
+| `branch_pattern` | string | `"noodle/{todo_id}-{slug}"` | Branch name used when `completion` is `branch`. `{todo_id}` is the sanitized order id. `{slug}` is the sanitized title. A title with no usable characters becomes `item`. |
+
+Any other `completion` value, including `pull_request`, is a fatal config error.
+
+```toml
+[git]
+completion = "branch"
+branch_pattern = "noodle/{todo_id}-{slug}"
+```
+
+With `completion = "branch"`, Noodle creates the worktree from the checked-out integration branch before the first stage. The worktree directory name is the sanitized order id. Later stages, retries, and a requeued order use that same checkout. A title or `branch_pattern` change after the first bind does not rename the branch or the worktree.
+
+The last stage with commits waits for review. **Approve & Complete** marks the backlog item done and leaves the branch and worktree in place. A clean last stage with no commits marks the item done without review and also leaves the branch and worktree. Merge, push, pull-request creation, and worktree cleanup stay separate actions.
+
+Branch mode runs local `process` stages only. An empty runtime counts as `process`. Any other runtime fails that order before Noodle creates a worktree.
+
+---
+
 ### `[agents]`
 
 Configures paths and arguments for agent CLI binaries. Each sub-table names a provider.
