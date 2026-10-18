@@ -12,13 +12,30 @@ import (
 	"github.com/poteto/noodle/internal/stringx"
 )
 
-const approvalActionComplete = "complete"
+const (
+	approvalActionComplete = "complete"
+	approvalActionContinue = "continue"
+)
 
 func (l *Loop) branchModeEnabled() bool {
 	return l.config.Git.Completion == config.GitCompletionBranch
 }
 
-func (l *Loop) usesBranchWorkspace(order Order) bool {
+func (l *Loop) usesBranchWorkspace(order Order, worktreeName string) bool {
+	worktreeName = strings.TrimSpace(worktreeName)
+	if ws, ok := l.orderWorkspace(order.ID); ok {
+		return worktreeName == "" || worktreeName == ws.WorktreeName
+	}
+	if worktreeName != "" {
+		return false
+	}
+	if node, ok := l.canonical.Orders[strings.TrimSpace(order.ID)]; ok {
+		for _, stage := range node.Stages {
+			if len(stage.Attempts) > 0 {
+				return false
+			}
+		}
+	}
 	if !l.branchModeEnabled() {
 		return false
 	}

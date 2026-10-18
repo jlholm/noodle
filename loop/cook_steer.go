@@ -176,9 +176,10 @@ func (l *Loop) steerRespawn(cook *cookHandle, prompt string) error {
 		Plan:   cook.plan,
 	}
 	return l.spawnCook(context.Background(), cand, order, spawnOptions{
-		attempt:     cook.attempt,
-		resume:      steerPrompt,
-		displayName: cook.displayName,
+		attempt:      cook.attempt,
+		resume:       steerPrompt,
+		displayName:  cook.displayName,
+		worktreeName: cook.worktreeName,
 	})
 }
 

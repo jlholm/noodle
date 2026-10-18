@@ -27,9 +27,10 @@ func (l *Loop) ensureSkillFresh(skillName string) bool {
 }
 
 type spawnOptions struct {
-	attempt     int
-	resume      string
-	displayName string // preserved across retries; empty = compute from session ID
+	attempt      int
+	resume       string
+	displayName  string // preserved across retries; empty = compute from session ID
+	worktreeName string
 }
 
 func (l *Loop) atMaxConcurrency() bool {
@@ -58,7 +59,8 @@ func (l *Loop) spawnCook(ctx context.Context, cand dispatchCandidate, order Orde
 	resumeBase := "main"
 	created := false
 	var err error
-	if l.usesBranchWorkspace(order) {
+	branchWorkspace := l.usesBranchWorkspace(order, opts.worktreeName)
+	if branchWorkspace {
 		if runtimeErr := branchRuntimeError(order); runtimeErr != nil {
 			return l.handleCookDispatchFailure(cand, stage, "", false, attemptID, runtimeErr)
 		}
@@ -69,6 +71,9 @@ func (l *Loop) spawnCook(ctx context.Context, cand dispatchCandidate, order Orde
 		name = ws.WorktreeName
 		resumeBase = ws.BaseBranch
 	} else {
+		if kept := strings.TrimSpace(opts.worktreeName); kept != "" {
+			name = kept
+		}
 		created, err = l.ensureWorktree(name)
 		if err != nil {
 			return fmt.Errorf("create worktree %s: %w", name, err)
@@ -84,7 +89,7 @@ func (l *Loop) spawnCook(ctx context.Context, cand dispatchCandidate, order Orde
 
 	resumePrompt := opts.resume
 	worktreePath := l.worktreePath(name)
-	if l.usesBranchWorkspace(order) {
+	if branchWorkspace {
 		if l.shouldResumeBranchStage(cand.OrderID, cand.StageIndex, opts.attempt) {
 			if hint := worktreeResumeContext(worktreePath, name, resumeBase); hint != "" {
 				resumePrompt = stringx.JoinNonEmpty("\n\n", hint, resumePrompt)

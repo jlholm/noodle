@@ -66,6 +66,26 @@ describe("ReviewList", () => {
     expect(mockMutate).toHaveBeenCalledWith({ action: "merge", order_id: "42" });
   });
 
+  it("labels a branch workspace review as continue", () => {
+    mockSnapshot = buildSnapshot({
+      pending_reviews: [
+        buildReview({
+          order_id: "42",
+          approval_action: "continue",
+          branch_name: "noodle/42-fix-login",
+        }),
+      ],
+      pending_review_count: 1,
+    });
+
+    render(<ReviewList />);
+
+    expect(screen.getByRole("button", { name: "Approve & Continue" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Approve & Merge" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Approve & Continue" }));
+    expect(mockMutate).toHaveBeenCalledWith({ action: "merge", order_id: "42" });
+  });
+
   it("keeps merge approval copy when the review has no completion action", () => {
     mockSnapshot = buildSnapshot({
       pending_reviews: [buildReview({ order_id: "7" })],

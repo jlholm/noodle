@@ -72,9 +72,15 @@ function ReviewActions({ review }: { review: PendingReviewItem }) {
     requestChangesLabel = "Send";
   }
 
-  const completesOrder = review.approval_action === "complete";
-  const approveLabel = completesOrder ? "Approve & Complete" : "Approve & Merge";
-  const approvePendingLabel = completesOrder ? "Completing…" : "Merging…";
+  let approveLabel = "Approve & Merge";
+  let approvePendingLabel = "Merging…";
+  if (review.approval_action === "complete") {
+    approveLabel = "Approve & Complete";
+    approvePendingLabel = "Completing…";
+  } else if (review.approval_action === "continue") {
+    approveLabel = "Approve & Continue";
+    approvePendingLabel = "Continuing…";
+  }
 
   return (
     <aside className="context-panel">

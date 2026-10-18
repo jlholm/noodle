@@ -3,6 +3,7 @@ package loop
 import (
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -190,6 +191,145 @@ func TestAdoptedSessionFollowsCookCheckout(t *testing.T) {
 	})
 }
 
+func TestSpawnKeepsStoredWorkspaceAfterCompletionSwitch(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping git integration in short mode")
+	}
+
+	t.Run("branch stage stays on its checkout after a switch to merge", func(t *testing.T) {
+		env := newGitLoop(t, branchTestConfig("supervised"))
+		env.setOrders(gitOrder("42", "Fix login",
+			gitStage("execute", "execute", "process"),
+			gitStage("review", "review", "process"),
+		))
+		env.cycle()
+		call := env.lastCall()
+		gitCommit(t, call.WorktreePath, "stage one")
+		env.loop.config.Git.Completion = config.GitCompletionMerge
+		env.complete("completed")
+		env.cycle()
+
+		next := env.lastCall()
+		wantBranch := renderBranchPattern(config.DefaultBranchPattern, "42", "Fix login")
+		if next.WorktreePath != call.WorktreePath || currentBranch(t, next.WorktreePath) != wantBranch {
+			t.Fatalf("stage 1 dispatch = path %q branch %q", next.WorktreePath, currentBranch(t, next.WorktreePath))
+		}
+		if !gitLogContains(t, call.WorktreePath, "stage one") {
+			t.Fatal("stage 1 lost the stage 0 commit")
+		}
+		if gitLogContains(t, env.dir, "stage one") {
+			t.Fatal("stage 1 merged the stage 0 commit onto the integration branch")
+		}
+		assertCheckoutNames(t, env.dir, call.Name)
+	})
+
+	t.Run("branch retry stays on its checkout after a switch to merge", func(t *testing.T) {
+		env := newGitLoop(t, branchTestConfig("supervised"))
+		env.setOrders(gitOrder("42", "Fix login", gitStage("execute", "execute", "process")))
+		env.cycle()
+		call := env.lastCall()
+		gitCommit(t, call.WorktreePath, "keep the note")
+		env.complete("completed")
+		env.cycle()
+		env.loop.config.Git.Completion = config.GitCompletionMerge
+		if err := env.loop.controlRequestChanges("42", "tighten the copy"); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.loop.controlRequeue("42"); err != nil {
+			t.Fatal(err)
+		}
+		env.cycle()
+
+		again := env.lastCall()
+		wantBranch := renderBranchPattern(config.DefaultBranchPattern, "42", "Fix login")
+		if again.WorktreePath != call.WorktreePath || currentBranch(t, again.WorktreePath) != wantBranch {
+			t.Fatalf("requeue dispatch = path %q branch %q", again.WorktreePath, currentBranch(t, again.WorktreePath))
+		}
+		if !strings.Contains(again.Prompt, "resuming work") || !strings.Contains(again.Prompt, "keep the note") {
+			t.Fatalf("retry prompt = %s", again.Prompt)
+		}
+		if !gitLogContains(t, call.WorktreePath, "keep the note") {
+			t.Fatal("retry lost the branch commit")
+		}
+		assertCheckoutNames(t, env.dir, call.Name)
+	})
+
+	t.Run("branch steer stays on its checkout after a switch to merge", func(t *testing.T) {
+		env := newGitLoop(t, branchTestConfig("auto"))
+		env.setOrders(gitOrder("42", "Fix login", gitStage("execute", "execute", "process")))
+		env.cycle()
+		call := env.lastCall()
+		gitCommit(t, call.WorktreePath, "keep me")
+		env.loop.config.Git.Completion = config.GitCompletionMerge
+		if err := env.loop.steer(call.Name, "hold the branch"); err != nil {
+			t.Fatal(err)
+		}
+
+		again := env.lastCall()
+		wantBranch := renderBranchPattern(config.DefaultBranchPattern, "42", "Fix login")
+		if again.WorktreePath != call.WorktreePath || currentBranch(t, again.WorktreePath) != wantBranch {
+			t.Fatalf("steer dispatch = path %q branch %q", again.WorktreePath, currentBranch(t, again.WorktreePath))
+		}
+		if !strings.Contains(again.Prompt, "hold the branch") {
+			t.Fatalf("steer prompt = %s", again.Prompt)
+		}
+		if !gitLogContains(t, call.WorktreePath, "keep me") {
+			t.Fatal("steer lost the branch commit")
+		}
+		assertCheckoutNames(t, env.dir, call.Name)
+	})
+
+	t.Run("merge steer stays on merge after a switch to branch", func(t *testing.T) {
+		cfg := config.DefaultConfig()
+		cfg.Mode = "auto"
+		env := newGitLoop(t, cfg)
+		env.setOrders(gitOrder("42", "Fix login", gitStage("execute", "execute", "process")))
+		env.cycle()
+		call := env.lastCall()
+		gitCommit(t, call.WorktreePath, "merge me")
+		env.loop.config.Git.Completion = config.GitCompletionBranch
+		env.loop.config.Git.BranchPattern = config.DefaultBranchPattern
+		if err := env.loop.steer(call.Name, "stay here"); err != nil {
+			t.Fatal(err)
+		}
+
+		again := env.lastCall()
+		if again.WorktreePath != call.WorktreePath {
+			t.Fatalf("steer path = %q, want %q", again.WorktreePath, call.WorktreePath)
+		}
+		if !strings.Contains(again.Prompt, "stay here") || !gitLogContains(t, call.WorktreePath, "merge me") {
+			t.Fatal("merge steer left its checkout")
+		}
+		if _, ok := env.loop.orderWorkspace("42"); ok {
+			t.Fatal("merge steer bound an order workspace")
+		}
+		wantBranch := renderBranchPattern(config.DefaultBranchPattern, "42", "Fix login")
+		if localBranchExists(env.dir, wantBranch) {
+			t.Fatalf("orphan branch %s exists", wantBranch)
+		}
+		assertCheckoutNames(t, env.dir, call.Name)
+	})
+}
+
+func assertCheckoutNames(t *testing.T, dir string, want ...string) {
+	t.Helper()
+	entries, err := os.ReadDir(filepath.Join(dir, ".worktrees"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if entry.IsDir() {
+			got = append(got, entry.Name())
+		}
+	}
+	sort.Strings(got)
+	sort.Strings(want)
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("checkouts = %v, want %v", got, want)
+	}
+}
+
 func TestBranchWorkspaceRecoversDeletedCheckout(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping git integration in short mode")
@@ -250,7 +390,7 @@ func TestBlockingStageMessageOnNonFinalBranchStageContinues(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(reviews) != 1 || reviews[0].ApprovalAction != "" {
+	if len(reviews) != 1 || reviews[0].ApprovalAction != approvalActionContinue {
 		t.Fatalf("intermediate reviews = %#v", reviews)
 	}
 	if len(env.adapter.doneCalls) != 0 {

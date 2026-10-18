@@ -36,9 +36,15 @@ export function ReviewBanner({ review }: { review: PendingReviewItem }) {
     requestChangesLabel = "SEND";
   }
 
-  const completesOrder = review.approval_action === "complete";
-  const approveLabel = completesOrder ? "COMPLETE" : "MERGE";
-  const approvePendingLabel = completesOrder ? "COMPLETING…" : "MERGING…";
+  let approveLabel = "MERGE";
+  let approvePendingLabel = "MERGING…";
+  if (review.approval_action === "complete") {
+    approveLabel = "COMPLETE";
+    approvePendingLabel = "COMPLETING…";
+  } else if (review.approval_action === "continue") {
+    approveLabel = "CONTINUE";
+    approvePendingLabel = "CONTINUING…";
+  }
 
   return (
     <div className="border-l-2 border-accent p-4 bg-accent/5 mx-4 mb-2">

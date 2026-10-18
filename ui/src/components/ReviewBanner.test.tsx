@@ -39,4 +39,20 @@ describe("ReviewBanner", () => {
     fireEvent.click(screen.getByRole("button", { name: "MERGE" }));
     expect(mockMutate).toHaveBeenCalledWith({ action: "merge", order_id: "7" });
   });
+
+  it("labels a continue review as continue", () => {
+    render(<ReviewBanner review={buildReview({ order_id: "42", approval_action: "continue" })} />);
+
+    expect(screen.getByRole("button", { name: "CONTINUE" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "MERGE" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "CONTINUE" }));
+    expect(mockMutate).toHaveBeenCalledWith({ action: "merge", order_id: "42" });
+  });
+
+  it("labels a continue review as continuing while the control is in flight", () => {
+    controlState.isPending = true;
+    render(<ReviewBanner review={buildReview({ approval_action: "continue" })} />);
+
+    expect(screen.getByRole("button", { name: "CONTINUING…" })).toBeInTheDocument();
+  });
 });

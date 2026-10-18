@@ -242,6 +242,8 @@ func (l *Loop) reviewPayloadForCook(cook *cookHandle, reason string) map[string]
 		payload["base_branch"] = ws.BaseBranch
 		if l.stageIsFinal(cook) {
 			payload["approval_action"] = approvalActionComplete
+		} else {
+			payload["approval_action"] = approvalActionContinue
 		}
 	}
 	return payload
