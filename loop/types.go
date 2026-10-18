@@ -123,10 +123,14 @@ type cookHandle struct {
 // pendingReviewCook is a completed cook waiting for human merge/reject.
 type pendingReviewCook struct {
 	cookIdentity
-	worktreeName string
-	worktreePath string
-	sessionID    string
-	reason       string
+	worktreeName   string
+	worktreePath   string
+	branchName     string
+	baseBranch     string
+	baseCommit     string
+	approvalAction string
+	sessionID      string
+	reason         string
 }
 
 type WorktreeManager interface {
@@ -135,6 +139,15 @@ type WorktreeManager interface {
 	MergeRemoteBranch(branch string) error
 	Cleanup(name string, opts ...worktree.CleanupOpts) error
 	HasUnmergedCommits(name string) (bool, error)
+	CurrentBranch() (string, error)
+	ResolveCommit(ref string) (string, error)
+	CheckedOutBranch(path string) (string, error)
+	BranchExists(branch string) bool
+	BranchWorktree(branch string) (string, bool, error)
+	CreateBranch(name, branch, base string) error
+	AttachBranch(name, branch string) error
+	Clean(path string) (bool, error)
+	CommitsAhead(branch, base string) (bool, error)
 }
 
 type AdapterRunner interface {
@@ -206,10 +219,10 @@ type Loop struct {
 	lastStatus statusfile.Status
 
 	// V2 canonical state — event-sourced pipeline.
-	canonical    state.State
+	canonical       state.State
 	canonicalLoaded bool
-	effectLedger *reducer.EffectLedger
-	eventCounter atomic.Uint64
+	effectLedger    *reducer.EffectLedger
+	eventCounter    atomic.Uint64
 
 	reconciledFailures []reconciledFailure
 	lastMiseWarnings   []string

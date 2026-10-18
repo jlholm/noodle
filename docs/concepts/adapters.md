@@ -76,6 +76,8 @@ Only `id` and `title` are required. Everything else — any field, any type — 
 
 Noodle calls your `done` command when an order completes, passing the item ID as the first argument. Your command should mark that item complete in your external system. No stdin, no output expected.
 
+With `git.completion = "branch"`, completion means the reviewed branch is ready for handoff. The `done` command runs before a pull request is merged.
+
 ```
 my-adapters/backlog-done <id>
 ```

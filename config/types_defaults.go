@@ -21,6 +21,19 @@ type Config struct {
 	Agents      AgentsConfig             `toml:"agents"`
 	Runtime     RuntimeConfig            `toml:"runtime"`
 	Server      ServerConfig             `toml:"server"`
+	Git         GitConfig                `toml:"git"`
+}
+
+const (
+	GitCompletionMerge   = "merge"
+	GitCompletionBranch  = "branch"
+	DefaultBranchPattern = "noodle/{todo_id}-{slug}"
+)
+
+// GitConfig chooses how finished order work is integrated.
+type GitConfig struct {
+	Completion    string `toml:"completion"`
+	BranchPattern string `toml:"branch_pattern"`
 }
 
 type AdapterConfig struct {
@@ -124,17 +137,19 @@ type ConfigDiagnostic struct {
 }
 
 const (
-	DiagnosticCodeRoutingDefaultsMissing = "routing_defaults_missing"
-	DiagnosticCodeAgentDirMissing        = "agent_dir_missing"
-	DiagnosticCodeAdapterSkillMissing    = "adapter_skill_missing"
-	DiagnosticCodeAdapterScriptEmpty     = "adapter_script_empty"
-	DiagnosticCodeAdapterScriptMissing   = "adapter_script_missing"
-	DiagnosticCodeProviderUnknown        = "provider_unknown"
-	DiagnosticCodeRuntimeDefaultUnknown  = "runtime_default_unknown"
-	DiagnosticCodeNoBacklogAdapter       = "no_backlog_adapter"
-	DiagnosticCodeConfigFieldRemoved     = "config_field_removed"
-	DiagnosticCodeConfigFieldUnknown     = "config_field_unknown"
-	DiagnosticCodeConfigValueNormalized  = "config_value_normalized"
+	DiagnosticCodeRoutingDefaultsMissing  = "routing_defaults_missing"
+	DiagnosticCodeAgentDirMissing         = "agent_dir_missing"
+	DiagnosticCodeAdapterSkillMissing     = "adapter_skill_missing"
+	DiagnosticCodeAdapterScriptEmpty      = "adapter_script_empty"
+	DiagnosticCodeAdapterScriptMissing    = "adapter_script_missing"
+	DiagnosticCodeProviderUnknown         = "provider_unknown"
+	DiagnosticCodeRuntimeDefaultUnknown   = "runtime_default_unknown"
+	DiagnosticCodeNoBacklogAdapter        = "no_backlog_adapter"
+	DiagnosticCodeConfigFieldRemoved      = "config_field_removed"
+	DiagnosticCodeConfigFieldUnknown      = "config_field_unknown"
+	DiagnosticCodeConfigValueNormalized   = "config_value_normalized"
+	DiagnosticCodeGitCompletionUnknown    = "git_completion_unknown"
+	DiagnosticCodeGitBranchPatternInvalid = "git_branch_pattern_invalid"
 )
 
 type ValidationResult struct {
@@ -193,6 +208,10 @@ func DefaultConfig() Config {
 		},
 		Server: ServerConfig{
 			Port: 3000,
+		},
+		Git: GitConfig{
+			Completion:    GitCompletionMerge,
+			BranchPattern: DefaultBranchPattern,
 		},
 	}
 }

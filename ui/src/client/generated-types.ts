@@ -100,6 +100,9 @@ export interface Order {
   rationale?: string;
   stages: Stage[];
   status: string;
+  worktree_name?: string;
+  branch_name?: string;
+  base_branch?: string;
 }
 /**
  * Stage is a unit of work within an order in the snapshot.

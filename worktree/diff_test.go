@@ -77,3 +77,72 @@ func TestDiffWorktree_NonexistentPath(t *testing.T) {
 		t.Errorf("error should mention 'not found', got: %v", err)
 	}
 }
+
+func TestDiffWorktreeAgainstFeatureBranch(t *testing.T) {
+	skipWorktreeIntegrationShort(t)
+
+	dir := setupTestRepo(t)
+	runGitIn(t, dir, "checkout", "-b", "feature/pilot")
+	writeFile(t, filepath.Join(dir, "pilot.txt"), "integration branch content")
+	runGitIn(t, dir, "add", "pilot.txt")
+	runGitIn(t, dir, "commit", "-m", "add pilot content")
+
+	runGitIn(t, dir, "checkout", "-b", "noodle/task")
+	writeFile(t, filepath.Join(dir, "task.txt"), "task content")
+	runGitIn(t, dir, "add", "task.txt")
+	runGitIn(t, dir, "commit", "-m", "add task content")
+
+	result, err := DiffWorktreeAgainst(dir, "feature/pilot")
+	if err != nil {
+		t.Fatalf("DiffWorktreeAgainst: %v", err)
+	}
+	if !strings.Contains(result.Diff, "task.txt") {
+		t.Fatalf("diff should include task.txt, got:\n%s", result.Diff)
+	}
+	if strings.Contains(result.Diff, "pilot.txt") {
+		t.Fatalf("diff should exclude integration branch changes, got:\n%s", result.Diff)
+	}
+}
+
+func TestDiffWorktreeAgainstIncludesUncommittedChanges(t *testing.T) {
+	skipWorktreeIntegrationShort(t)
+
+	dir := setupTestRepo(t)
+	runGitIn(t, dir, "checkout", "-b", "noodle/task")
+	writeFile(t, filepath.Join(dir, "committed.txt"), "committed content")
+	runGitIn(t, dir, "add", "committed.txt")
+	runGitIn(t, dir, "commit", "-m", "committed work")
+	writeFile(t, filepath.Join(dir, "committed.txt"), "unstaged content")
+	writeFile(t, filepath.Join(dir, "staged.txt"), "staged content")
+	runGitIn(t, dir, "add", "staged.txt")
+	writeFile(t, filepath.Join(dir, "untracked.txt"), "untracked content")
+	before, err := gitOutput(dir, "status", "--porcelain")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := DiffWorktreeAgainst(dir, "main")
+	if err != nil {
+		t.Fatal(err)
+	}
+	after, err := gitOutput(dir, "status", "--porcelain")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after != before {
+		t.Fatalf("review changed the working tree status: before %q, after %q", before, after)
+	}
+	for _, want := range []string{"unstaged content", "staged content", "untracked content"} {
+		if !strings.Contains(result.Diff, want) {
+			t.Errorf("diff missing %q: %s", want, result.Diff)
+		}
+	}
+	if !result.Uncommitted {
+		t.Fatal("diff should report uncommitted changes")
+	}
+	for _, want := range []string{"committed.txt", "staged.txt", "untracked.txt"} {
+		if !strings.Contains(result.Stat, want) {
+			t.Errorf("stat missing %q: %s", want, result.Stat)
+		}
+	}
+}

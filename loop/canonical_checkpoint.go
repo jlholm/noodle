@@ -161,19 +161,23 @@ func synthesizeCanonicalState(
 				stage = order.Stages[reviewItem.StageIndex]
 			}
 			canonicalReviews[order.ID] = state.PendingReviewNode{
-				OrderID:      strings.TrimSpace(reviewItem.OrderID),
-				StageIndex:   reviewItem.StageIndex,
-				TaskKey:      strings.TrimSpace(stage.TaskKey),
-				Prompt:       strings.TrimSpace(stage.Prompt),
-				Provider:     strings.TrimSpace(stage.Provider),
-				Model:        strings.TrimSpace(stage.Model),
-				Runtime:      strings.TrimSpace(stage.Runtime),
-				Skill:        strings.TrimSpace(stage.Skill),
-				Plan:         slices.Clone(order.Plan),
-				WorktreeName: strings.TrimSpace(reviewItem.WorktreeName),
-				WorktreePath: strings.TrimSpace(reviewItem.WorktreePath),
-				SessionID:    strings.TrimSpace(reviewItem.SessionID),
-				Reason:       strings.TrimSpace(reviewItem.Reason),
+				OrderID:        strings.TrimSpace(reviewItem.OrderID),
+				StageIndex:     reviewItem.StageIndex,
+				TaskKey:        strings.TrimSpace(stage.TaskKey),
+				Prompt:         strings.TrimSpace(stage.Prompt),
+				Provider:       strings.TrimSpace(stage.Provider),
+				Model:          strings.TrimSpace(stage.Model),
+				Runtime:        strings.TrimSpace(stage.Runtime),
+				Skill:          strings.TrimSpace(stage.Skill),
+				Plan:           slices.Clone(order.Plan),
+				WorktreeName:   strings.TrimSpace(reviewItem.WorktreeName),
+				WorktreePath:   strings.TrimSpace(reviewItem.WorktreePath),
+				BranchName:     strings.TrimSpace(reviewItem.BranchName),
+				BaseBranch:     strings.TrimSpace(reviewItem.BaseBranch),
+				BaseCommit:     strings.TrimSpace(reviewItem.BaseCommit),
+				ApprovalAction: strings.TrimSpace(reviewItem.ApprovalAction),
+				SessionID:      strings.TrimSpace(reviewItem.SessionID),
+				Reason:         strings.TrimSpace(reviewItem.Reason),
 			}
 		}
 		canonicalOrders[order.ID] = state.OrderNode{

@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { useSendControl } from "~/client";
+import { useReviewDiff, useSendControl } from "~/client";
 import type { PendingReviewItem } from "~/client";
 
 export function ReviewBanner({ review }: { review: PendingReviewItem }) {
   const { mutate: send, isPending } = useSendControl();
+  const { data: diff } = useReviewDiff(review.order_id);
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedback, setFeedback] = useState("");
 
@@ -36,6 +37,16 @@ export function ReviewBanner({ review }: { review: PendingReviewItem }) {
     requestChangesLabel = "SEND";
   }
 
+  let approveLabel = "MERGE";
+  let approvePendingLabel = "MERGING…";
+  if (review.approval_action === "complete") {
+    approveLabel = "APPROVE HANDOFF";
+    approvePendingLabel = "COMPLETING…";
+  } else if (review.approval_action === "continue") {
+    approveLabel = "CONTINUE";
+    approvePendingLabel = "CONTINUING…";
+  }
+
   return (
     <div className="border-l-2 border-accent p-4 bg-accent/5 mx-4 mb-2">
       <div className="text-xs font-display font-bold uppercase tracking-wider text-accent mb-1">
@@ -43,6 +54,16 @@ export function ReviewBanner({ review }: { review: PendingReviewItem }) {
       </div>
       {review.reason && (
         <div className="text-xs font-body text-neutral-400 mb-3">{review.reason}</div>
+      )}
+      {review.approval_action === "complete" && diff?.uncommitted && (
+        <div className="text-xs font-body text-accent mb-3">
+          Commit worktree changes before approval.
+        </div>
+      )}
+      {review.approval_action === "complete" && !diff && (
+        <div className="text-xs font-body text-accent mb-3">
+          Review diff unavailable. Open Reviews to retry.
+        </div>
       )}
 
       {showFeedback && (
@@ -70,10 +91,12 @@ export function ReviewBanner({ review }: { review: PendingReviewItem }) {
         <button
           type="button"
           onClick={handleMerge}
-          disabled={isPending}
+          disabled={
+            isPending || (review.approval_action === "complete" && (!diff || diff.uncommitted))
+          }
           className="font-body font-bold uppercase text-[10px] tracking-wider px-3 py-1.5 bg-green text-black"
         >
-          {isPending ? "MERGING…" : "MERGE"}
+          {isPending ? approvePendingLabel : approveLabel}
         </button>
         <button
           type="button"

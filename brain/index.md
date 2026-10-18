@@ -26,6 +26,7 @@
 ## Codebase
 - [[codebase/adopted-session-reconciliation]]
 - [[codebase/backlog-sync-parse-errors-are-recoverable-warnings]]
+- [[codebase/branch-review-must-fail-closed]]
 - [[codebase/claude-code-ndjson-protocol]]
 - [[codebase/claude-print-flag-gotchas]]
 - [[codebase/claude-subprocess-spawn-patterns]]

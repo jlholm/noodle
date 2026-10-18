@@ -20,6 +20,8 @@ Full documentation lives at [noodle-run.github.io/noodle](https://noodle-run.git
 ## Contributing
 
 ```sh
-pnpm build    # build
-pnpm check    # lint + test + vet
+mise install
+mise run setup
+mise run build
+mise run check
 ```

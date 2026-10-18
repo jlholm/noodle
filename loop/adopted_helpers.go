@@ -45,6 +45,9 @@ func (l *Loop) buildAdoptedCook(targetID string, sessionID string, status string
 			return nil, false, nil
 		}
 		name := cookBaseName(order.ID, idx, stg.TaskKey)
+		if recorded := l.recordedStageWorktree(order.ID, idx); recorded != "" {
+			name = recorded
+		}
 		worktreePath := l.worktreePath(name)
 		return &cookHandle{
 			cookIdentity: cookIdentity{
@@ -77,6 +80,20 @@ func (l *Loop) dropAdoptedTarget(targetID string, sessionID string) {
 		filtered = append(filtered, id)
 	}
 	l.cooks.adoptedSessions = filtered
+}
+
+func (l *Loop) recordedStageWorktree(orderID string, stageIndex int) string {
+	order, ok := l.canonical.Orders[strings.TrimSpace(orderID)]
+	if !ok || stageIndex < 0 || stageIndex >= len(order.Stages) {
+		return ""
+	}
+	attempts := order.Stages[stageIndex].Attempts
+	for i := len(attempts) - 1; i >= 0; i-- {
+		if name := strings.TrimSpace(attempts[i].WorktreeName); name != "" {
+			return name
+		}
+	}
+	return ""
 }
 
 func recoveryChainLength(name string) int {

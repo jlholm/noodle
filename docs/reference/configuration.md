@@ -82,6 +82,33 @@ Each agent consumes tokens independently. `max_concurrency = 4` means up to four
 
 ---
 
+### `[git]`
+
+Controls the Git checkout for an order.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `completion` | string | `"merge"` | `merge` merges each stage into the checked-out integration branch and removes that stage worktree. `branch` keeps one worktree and one branch for the order. |
+| `branch_pattern` | string | `"noodle/{todo_id}-{slug}"` | Branch name used when `completion` is `branch`. `{todo_id}` is required and is the sanitized order id. `{slug}` is the sanitized title and the only other placeholder. A title with no usable characters becomes `item`. A missing `{todo_id}`, any other placeholder, an unclosed brace, or a pattern that cannot form a Git branch name is a fatal config error. |
+
+Any other `completion` value, including `pull_request`, is a fatal config error.
+
+```toml
+[git]
+completion = "branch"
+branch_pattern = "noodle/{todo_id}-{slug}"
+```
+
+With `completion = "branch"`, Noodle creates the worktree from the checked-out integration branch before the first stage. The worktree directory name is the sanitized order id. Later stages, retries, and a requeued order use that same checkout. A title or `branch_pattern` change after the first bind does not rename the branch or the worktree. A cook keeps the completion and cleanup policy of the checkout it is already using when `completion` changes. A stage on the order worktree keeps branch completion and cleanup. A stage on its own worktree keeps merge completion and cleanup. Dispatch fails when two orders would use the same sanitized worktree name or the same rendered branch name.
+
+The last stage with changes waits for review. The review diff includes committed, staged, unstaged, and untracked changes. Commit any remaining changes in the order worktree before approving. **Approve for Handoff** marks the backlog item done and leaves the branch and worktree in place. A clean last stage with no commits marks the item done without review. A blocking stage message on an earlier stage also waits for review; approval continues the order on the same worktree. The dashboard keeps completed branches visible with the base branch and commands to push and open a pull request.
+
+In branch mode, `done` means Noodle finished its work and handed off the reviewed branch. It does not mean the branch was pushed, merged, or shipped. Noodle does not track the pull request or clean up the worktree after handoff.
+
+Branch mode runs local `process` stages only. An empty runtime counts as `process`. Any other runtime fails that order before Noodle creates a worktree.
+
+---
+
 ### `[agents]`
 
 Configures paths and arguments for agent CLI binaries. Each sub-table names a provider.

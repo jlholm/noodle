@@ -490,6 +490,8 @@ func TestLoadSnapshotFromLoopState(t *testing.T) {
 						{TaskKey: "execute", Status: "active"},
 					},
 					Status: "active",
+					BranchName: "noodle/order-1",
+					BaseBranch: "main",
 				},
 			},
 			ActiveOrderIDs: []string{"order-1"},
@@ -531,6 +533,9 @@ func TestLoadSnapshotFromLoopState(t *testing.T) {
 	}
 	if snap.Orders[0].Stages[0].SessionID != "cook-a" {
 		t.Errorf("stage session_id = %q, want cook-a", snap.Orders[0].Stages[0].SessionID)
+	}
+	if snap.Orders[0].BranchName != "noodle/order-1" || snap.Orders[0].BaseBranch != "main" {
+		t.Errorf("order branch handoff = %+v", snap.Orders[0])
 	}
 	if snap.TotalCostUSD != 1.23 {
 		t.Errorf("total_cost = %f, want 1.23", snap.TotalCostUSD)

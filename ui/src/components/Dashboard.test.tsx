@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { buildSnapshot, buildSession } from "~/test-utils";
+import { buildOrder, buildSnapshot, buildSession } from "~/test-utils";
 import { Dashboard } from "./Dashboard";
 import type { Snapshot } from "~/client";
 
@@ -29,6 +29,50 @@ function setSnapshot(overrides: Partial<Snapshot>) {
 }
 
 describe("Dashboard", () => {
+  it("keeps an approved branch visible for handoff", () => {
+    setSnapshot({
+      orders: [
+        buildOrder({
+          id: "42",
+          title: "Fix login",
+          status: "completed",
+          branch_name: "noodle/42-fix-login",
+          base_branch: "main",
+        }),
+      ],
+    });
+
+    render(<Dashboard />);
+
+    const handoff = screen.getByRole("region", { name: "Ready for handoff" });
+    expect(within(handoff).getByText("Fix login")).toBeInTheDocument();
+    expect(
+      within(handoff).getByText(/git push -u origin noodle\/42-fix-login/),
+    ).toBeInTheDocument();
+    expect(
+      within(handoff).getByText(/gh pr create --base main --head noodle\/42-fix-login/),
+    ).toBeInTheDocument();
+  });
+
+  it("does not offer a copyable shell command for unusual branch names", () => {
+    setSnapshot({
+      orders: [
+        buildOrder({
+          id: "42",
+          status: "completed",
+          branch_name: "noodle/42;$USER",
+          base_branch: "main",
+        }),
+      ],
+    });
+
+    render(<Dashboard />);
+
+    const handoff = screen.getByRole("region", { name: "Ready for handoff" });
+    expect(within(handoff).getByText(/Quote the branch names for your shell/)).toBeInTheDocument();
+    expect(within(handoff).queryByText(/git push/)).not.toBeInTheDocument();
+  });
+
   it("clicking an active session row navigates to actor route", async () => {
     const user = userEvent.setup();
     setSnapshot({

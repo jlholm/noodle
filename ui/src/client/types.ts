@@ -49,6 +49,7 @@ export interface Order extends Omit<RawOrder, "status" | "stages"> {
 export interface DiffResponse {
   diff: string;
   stat: string;
+  uncommitted: boolean;
 }
 
 // Stage-level fields shared by enqueue, edit-item, and add-stage.

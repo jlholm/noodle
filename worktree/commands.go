@@ -20,17 +20,7 @@ func (a *App) Create(name string, opts ...CreateOpts) error {
 		o = opts[0]
 	}
 	wtPath := WorktreePath(a.Root, name)
-
-	if a.git("check-ignore", "-q", ".worktrees").Run() != nil {
-		f, err := os.OpenFile(
-			filepath.Join(a.Root, ".gitignore"),
-			os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644,
-		)
-		if err == nil {
-			_, _ = f.WriteString(".worktrees/\n")
-			f.Close()
-		}
-	}
+	a.ensureWorktreesGitignored()
 
 	if _, err := os.Stat(wtPath); err == nil {
 		return fmt.Errorf("worktree '%s' already exists at %s", name, wtPath)
@@ -52,6 +42,26 @@ func (a *App) Create(name string, opts ...CreateOpts) error {
 	}
 
 created:
+	a.finishWorktree(wtPath, name)
+	return nil
+}
+
+func (a *App) ensureWorktreesGitignored() {
+	if a.git("check-ignore", "-q", ".worktrees").Run() == nil {
+		return
+	}
+	f, err := os.OpenFile(
+		filepath.Join(a.Root, ".gitignore"),
+		os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644,
+	)
+	if err != nil {
+		return
+	}
+	_, _ = f.WriteString(".worktrees/\n")
+	f.Close()
+}
+
+func (a *App) finishWorktree(wtPath, branch string) {
 	settingsPath := filepath.Join(a.Root, ".claude", "settings.local.json")
 	if _, err := os.Stat(settingsPath); err == nil {
 		wtClaudeDir := filepath.Join(wtPath, ".claude")
@@ -61,9 +71,7 @@ created:
 	}
 
 	a.installDeps(wtPath)
-
-	a.printf("\nWorktree ready: %s (branch: %s)\n", wtPath, name)
-	return nil
+	a.printf("\nWorktree ready: %s (branch: %s)\n", wtPath, branch)
 }
 
 // Exec runs a command inside the named worktree.

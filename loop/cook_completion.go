@@ -127,6 +127,9 @@ func (l *Loop) handleCompletion(ctx context.Context, cook *cookHandle, resultSta
 		if blocked {
 			return nil
 		}
+		if ws, ok := l.usesOrderWorkspace(cook.orderID, cook.worktreeName); ok {
+			return l.completeBranchWorkspace(ctx, cook, ws, msg)
+		}
 		canMerge, err := l.worktreeHasChanges(cook)
 		if err != nil {
 			return l.failStage(ctx, cook, fmt.Sprintf("merge check: %v", err))

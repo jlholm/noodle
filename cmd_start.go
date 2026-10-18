@@ -23,6 +23,7 @@ import (
 	"github.com/poteto/noodle/internal/statever"
 	"github.com/poteto/noodle/loop"
 	"github.com/poteto/noodle/server"
+	"github.com/poteto/noodle/worktree"
 	"github.com/spf13/cobra"
 )
 
@@ -37,11 +38,13 @@ var newStartRuntimeLoop = func(projectDir, noodleBin string, cfg config.Config, 
 	return loop.New(projectDir, noodleBin, cfg, deps)
 }
 
+var newStartWorktreeApp = worktree.NewApp
 var openBrowserFunc = openBrowser
 var launchBrowserCommandFunc = launchBrowserCommand
 
 type startOptions struct {
-	once bool
+	once              bool
+	integrationBranch string
 }
 
 func newStartCmd(app *App) *cobra.Command {
@@ -55,6 +58,12 @@ func newStartCmd(app *App) *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVar(&opts.once, "once", false, "Run one scheduling cycle and exit")
+	cmd.Flags().StringVar(
+		&opts.integrationBranch,
+		"integration-branch",
+		"",
+		"Branch that receives completed work (default: currently checked-out branch)",
+	)
 	return cmd
 }
 
@@ -87,12 +96,33 @@ func runStart(ctx context.Context, app *App, opts startOptions) error {
 		return fmt.Errorf("state compatibility check failed at %s: %w", stateMarkerPath, err)
 	}
 
+	worktreeApp, err := newStartWorktreeApp()
+	if err != nil {
+		return err
+	}
+	currentBranch := worktreeApp.IntegrationBranch
+	integrationBranch := strings.TrimSpace(opts.integrationBranch)
+	if integrationBranch == "" {
+		integrationBranch = currentBranch
+	}
+	if integrationBranch != currentBranch {
+		return fmt.Errorf(
+			"integration branch %q is not checked out (on %q)",
+			integrationBranch,
+			currentBranch,
+		)
+	}
+	worktreeApp.IntegrationBranch = integrationBranch
+	worktreeApp.CmdPrefix = "noodle worktree"
+	worktreeApp.Quiet = true
+
 	broker := server.NewSessionEventBroker()
 	apiLogger := newAPILogger(os.Stderr)
 
 	runtimeLoop := newStartRuntimeLoop(cwd, noodleBin, app.Config, loop.Dependencies{
 		EventSink: broker,
 		Logger:    slog.New(apiLogger),
+		Worktree:  worktreeApp,
 	})
 	startServer := shouldStartServer(app.Config.Server)
 
@@ -118,7 +148,16 @@ func runStart(ctx context.Context, app *App, opts startOptions) error {
 
 	if startServer {
 		go func() {
-			if err := runWebServer(ctx, runtimeDir, app.Config, runtimeLoop, warnings, broker, apiLogger.With("component", "server")); err != nil {
+			if err := runWebServer(
+				ctx,
+				runtimeDir,
+				app.Config,
+				runtimeLoop,
+				warnings,
+				broker,
+				integrationBranch,
+				apiLogger.With("component", "server"),
+			); err != nil {
 				apiLogger.Error("web server exited", "error", err)
 			}
 		}()
@@ -144,6 +183,7 @@ func runWebServer(
 	provider server.LoopStateProvider,
 	warnings []string,
 	broker *server.SessionEventBroker,
+	integrationBranch string,
 	logger *charmlog.Logger,
 ) error {
 	port := cfg.Server.Port
@@ -162,6 +202,7 @@ func runWebServer(
 		LoopStateProvider: provider,
 		Warnings:          warnings,
 		Broker:            broker,
+		IntegrationBranch: integrationBranch,
 	})
 
 	errCh := make(chan error, 1)

@@ -15,6 +15,7 @@ import (
 	"github.com/poteto/noodle/internal/failure"
 	"github.com/poteto/noodle/internal/statever"
 	"github.com/poteto/noodle/loop"
+	"github.com/poteto/noodle/worktree"
 )
 
 type fakeStartLoop struct {
@@ -42,6 +43,15 @@ func (f *fakeStartLoop) Shutdown() {}
 
 func (f *fakeStartLoop) State() loop.LoopState { return loop.LoopState{} }
 
+func stubStartWorktreeApp(t *testing.T, projectDir, branch string) {
+	t.Helper()
+	originalFactory := newStartWorktreeApp
+	newStartWorktreeApp = func() (*worktree.App, error) {
+		return &worktree.App{Root: projectDir, IntegrationBranch: branch}, nil
+	}
+	t.Cleanup(func() { newStartWorktreeApp = originalFactory })
+}
+
 func TestRunStartOnceUsesLoopCycle(t *testing.T) {
 	projectDir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(projectDir, ".noodle"), 0o755); err != nil {
@@ -55,6 +65,7 @@ func TestRunStartOnceUsesLoopCycle(t *testing.T) {
 		t.Fatalf("chdir project dir: %v", err)
 	}
 	t.Cleanup(func() { _ = os.Chdir(originalDir) })
+	stubStartWorktreeApp(t, projectDir, "feature/pilot")
 
 	fakeLoop := &fakeStartLoop{}
 	var capturedDeps loop.Dependencies
@@ -77,6 +88,13 @@ func TestRunStartOnceUsesLoopCycle(t *testing.T) {
 	}
 	if capturedDeps.Logger == nil {
 		t.Fatal("expected runStart to inject a logger dependency")
+	}
+	worktreeApp, ok := capturedDeps.Worktree.(*worktree.App)
+	if !ok {
+		t.Fatalf("worktree dependency = %T, want *worktree.App", capturedDeps.Worktree)
+	}
+	if worktreeApp.IntegrationBranch != "feature/pilot" {
+		t.Fatalf("integration branch = %q, want %q", worktreeApp.IntegrationBranch, "feature/pilot")
 	}
 }
 
@@ -101,6 +119,7 @@ func TestRunStartRefusesFutureStateVersion(t *testing.T) {
 		t.Fatalf("chdir project dir: %v", err)
 	}
 	t.Cleanup(func() { _ = os.Chdir(originalDir) })
+	stubStartWorktreeApp(t, projectDir, "feature/pilot")
 
 	loopCreated := false
 	originalFactory := newStartRuntimeLoop
@@ -120,6 +139,27 @@ func TestRunStartRefusesFutureStateVersion(t *testing.T) {
 	}
 	if loopCreated {
 		t.Fatal("loop should not be created when state version is incompatible")
+	}
+}
+
+func TestRunStartRejectsIntegrationBranchThatIsNotCheckedOut(t *testing.T) {
+	projectDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(projectDir, ".noodle"), 0o755); err != nil {
+		t.Fatalf("mkdir .noodle: %v", err)
+	}
+	stubStartWorktreeApp(t, projectDir, "feature/pilot")
+
+	app := &App{Config: config.DefaultConfig(), projectDir: projectDir}
+	err := runStart(
+		context.Background(),
+		app,
+		startOptions{once: true, integrationBranch: "main"},
+	)
+	if err == nil {
+		t.Fatal("expected integration branch mismatch")
+	}
+	if !strings.Contains(err.Error(), `integration branch "main" is not checked out`) {
+		t.Fatalf("error = %q, want checked-out branch error", err)
 	}
 }
 

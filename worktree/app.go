@@ -30,7 +30,7 @@ func (a *App) cmdName() string {
 }
 
 // integrationBranch returns the branch that worktrees merge into.
-// Priority: explicit IntegrationBranch field > git remote HEAD > "main".
+// Apps created with NewApp pin this to the currently checked-out branch.
 func (a *App) integrationBranch() string {
 	if a.IntegrationBranch != "" {
 		return a.IntegrationBranch
@@ -53,7 +53,18 @@ func NewApp() (*App, error) {
 	if err != nil {
 		return nil, fmt.Errorf("not inside a git repository")
 	}
-	return &App{Root: strings.TrimSpace(string(out))}, nil
+	root := strings.TrimSpace(string(out))
+	branch, err := gitOutput(root, "branch", "--show-current")
+	if err != nil {
+		return nil, fmt.Errorf("resolve current branch: %w", err)
+	}
+	if branch == "" {
+		return nil, fmt.Errorf("cannot use a detached HEAD as the integration branch")
+	}
+	if strings.HasPrefix(branch, "-") {
+		return nil, fmt.Errorf("invalid integration branch %q", branch)
+	}
+	return &App{Root: root, IntegrationBranch: branch}, nil
 }
 
 // WorktreePath returns the on-disk path for a named worktree.
