@@ -1,0 +1,19 @@
+[tools]
+go = "1.25.0"
+node = "22.18.0"
+pnpm = "10.30.3"
+
+[env]
+_.path = ["./bin"]
+
+[tasks.setup]
+description = "Install project dependencies"
+run = "pnpm install --frozen-lockfile"
+
+[tasks.build]
+description = "Build the UI and Noodle binary"
+run = "pnpm build"
+
+[tasks.check]
+description = "Build, lint, and test"
+run = "pnpm check"
