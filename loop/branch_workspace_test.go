@@ -97,6 +97,40 @@ func TestBranchWorkspaceTwoStagesShareCheckout(t *testing.T) {
 	}
 }
 
+func TestBranchWorkspaceBindingSurvivesMaterializationFailure(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping git integration in short mode")
+	}
+	env := newGitLoop(t, branchTestConfig("supervised"))
+	order := gitOrder("42", "Fix login", gitStage("execute", "execute", "process"))
+	env.setOrders(order)
+	blockedPath := worktree.WorktreePath(env.dir, orderWorktreeName("42"))
+	if err := os.MkdirAll(filepath.Dir(blockedPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(blockedPath, []byte("blocked"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := env.loop.ensureOrderWorkspace(order); err == nil {
+		t.Fatal("expected worktree creation to fail")
+	}
+	bound, ok := env.loop.orderWorkspace("42")
+	if !ok {
+		t.Fatal("workspace binding was not persisted before Git creation")
+	}
+	if err := os.Remove(blockedPath); err != nil {
+		t.Fatal(err)
+	}
+	env.loop.config.Git.BranchPattern = "changed/{slug}"
+	resumed, err := env.loop.ensureOrderWorkspace(order)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resumed != bound || currentBranch(t, blockedPath) != bound.BranchName {
+		t.Fatalf("resumed workspace = %#v, want %#v", resumed, bound)
+	}
+}
+
 func TestBranchWorkspaceAdoptsMatchingWorktree(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping git integration in short mode")
@@ -323,6 +357,27 @@ func TestBranchWorkspaceDirtyApprovalStaysReviewable(t *testing.T) {
 	}
 	if !localBranchExists(env.dir, renderBranchPattern(config.DefaultBranchPattern, "42", "Fix login")) {
 		t.Fatal("approval deleted the branch")
+	}
+}
+
+func TestBranchWorkspaceApprovalRejectsDifferentCheckout(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping git integration in short mode")
+	}
+	env := newGitLoop(t, branchTestConfig("supervised"))
+	env.setOrders(gitOrder("42", "Fix login", gitStage("execute", "execute", "process")))
+	env.cycle()
+	call := env.lastCall()
+	gitCommit(t, call.WorktreePath, "ready for review")
+	env.complete("completed")
+	env.cycle()
+	git(t, call.WorktreePath, "checkout", "-b", "different-branch")
+	if err := env.loop.controlMerge("42"); err == nil || !strings.Contains(err.Error(), "different-branch") {
+		t.Fatalf("approval error = %v", err)
+	}
+	reviews, err := ReadPendingReview(env.loop.runtimeDir)
+	if err != nil || len(reviews) != 1 {
+		t.Fatalf("review after refusal = %#v err=%v", reviews, err)
 	}
 }
 

@@ -103,3 +103,35 @@ func TestDiffWorktreeAgainstFeatureBranch(t *testing.T) {
 		t.Fatalf("diff should exclude integration branch changes, got:\n%s", result.Diff)
 	}
 }
+
+func TestDiffWorktreeAgainstIncludesUncommittedChanges(t *testing.T) {
+	skipWorktreeIntegrationShort(t)
+
+	dir := setupTestRepo(t)
+	runGitIn(t, dir, "checkout", "-b", "noodle/task")
+	writeFile(t, filepath.Join(dir, "committed.txt"), "committed content")
+	runGitIn(t, dir, "add", "committed.txt")
+	runGitIn(t, dir, "commit", "-m", "committed work")
+	writeFile(t, filepath.Join(dir, "committed.txt"), "unstaged content")
+	writeFile(t, filepath.Join(dir, "staged.txt"), "staged content")
+	runGitIn(t, dir, "add", "staged.txt")
+	writeFile(t, filepath.Join(dir, "untracked.txt"), "untracked content")
+
+	result, err := DiffWorktreeAgainst(dir, "main")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"unstaged content", "staged content", "untracked content"} {
+		if !strings.Contains(result.Diff, want) {
+			t.Errorf("diff missing %q: %s", want, result.Diff)
+		}
+	}
+	if !result.Uncommitted {
+		t.Fatal("diff should report uncommitted changes")
+	}
+	for _, want := range []string{"committed.txt", "staged.txt", "untracked.txt"} {
+		if !strings.Contains(result.Stat, want) {
+			t.Errorf("stat missing %q: %s", want, result.Stat)
+		}
+	}
+}

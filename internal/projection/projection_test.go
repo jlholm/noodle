@@ -531,6 +531,7 @@ func TestOrderProjectionMapsFromOrderNode(t *testing.T) {
 			"order-1": {
 				OrderID:   "order-1",
 				Status:    state.OrderCancelled,
+				Workspace: &state.OrderWorkspace{WorktreeName: "order-1", BranchName: "noodle/order-1", BaseBranch: "main"},
 				CreatedAt: now,
 				UpdatedAt: now,
 				Stages: []state.StageNode{
@@ -560,6 +561,9 @@ func TestOrderProjectionMapsFromOrderNode(t *testing.T) {
 	order := bundle.OrdersProjection[0]
 	if order.ID != "order-1" || order.Status != string(state.OrderCancelled) {
 		t.Fatalf("order projection mismatch: %+v", order)
+	}
+	if order.Workspace == nil || order.Workspace.BranchName != "noodle/order-1" || bundle.SnapshotView.Orders[0].Workspace == nil {
+		t.Fatalf("workspace missing from completed order: %+v", order)
 	}
 	if len(order.Stages) != 1 {
 		t.Fatalf("stage projection count = %d, want 1", len(order.Stages))
