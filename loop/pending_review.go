@@ -30,6 +30,7 @@ type PendingReviewItem struct {
 	WorktreePath   string   `json:"worktree_path"`
 	BranchName     string   `json:"branch_name,omitempty"`
 	BaseBranch     string   `json:"base_branch,omitempty"`
+	BaseCommit     string   `json:"base_commit,omitempty"`
 	ApprovalAction string   `json:"approval_action,omitempty"`
 	SessionID      string   `json:"session_id,omitempty"`
 	Reason         string   `json:"reason,omitempty"`
@@ -94,6 +95,7 @@ func (l *Loop) writePendingReview() error {
 			WorktreePath:   review.WorktreePath,
 			BranchName:     review.BranchName,
 			BaseBranch:     review.BaseBranch,
+			BaseCommit:     review.BaseCommit,
 			ApprovalAction: review.ApprovalAction,
 			SessionID:      review.SessionID,
 			Reason:         review.Reason,
@@ -139,6 +141,7 @@ func (l *Loop) loadPendingReview() error {
 			worktreePath:   strings.TrimSpace(review.WorktreePath),
 			branchName:     strings.TrimSpace(review.BranchName),
 			baseBranch:     strings.TrimSpace(review.BaseBranch),
+			baseCommit:     strings.TrimSpace(review.BaseCommit),
 			approvalAction: strings.TrimSpace(review.ApprovalAction),
 			sessionID:      strings.TrimSpace(review.SessionID),
 			reason:         strings.TrimSpace(review.Reason),
@@ -240,6 +243,7 @@ func (l *Loop) reviewPayloadForCook(cook *cookHandle, reason string) map[string]
 	if ws, ok := l.usesOrderWorkspace(cook.orderID, cook.worktreeName); ok {
 		payload["branch_name"] = ws.BranchName
 		payload["base_branch"] = ws.BaseBranch
+		payload["base_commit"] = ws.BaseCommit
 		if l.stageIsFinal(cook) {
 			payload["approval_action"] = approvalActionComplete
 		} else {

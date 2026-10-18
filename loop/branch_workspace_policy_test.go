@@ -92,6 +92,7 @@ func TestPendingReviewFollowsCookCheckout(t *testing.T) {
 		WorktreeName: "not-the-cook",
 		BranchName:   "noodle/not-the-cook",
 		BaseBranch:   env.base,
+		BaseCommit:   gitCommitID(t, env.dir, env.base),
 	}
 	env.loop.canonical.Orders["42"] = node
 	env.loop.config.Git.Completion = config.GitCompletionBranch
@@ -176,6 +177,7 @@ func TestAdoptedSessionFollowsCookCheckout(t *testing.T) {
 			WorktreeName: "not-the-cook",
 			BranchName:   "noodle/not-the-cook",
 			BaseBranch:   env.base,
+			BaseCommit:   gitCommitID(t, env.dir, env.base),
 		}
 		env.loop.canonical.Orders["42"] = node
 		env.loop.config.Git.Completion = config.GitCompletionBranch

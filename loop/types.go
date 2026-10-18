@@ -127,6 +127,7 @@ type pendingReviewCook struct {
 	worktreePath   string
 	branchName     string
 	baseBranch     string
+	baseCommit     string
 	approvalAction string
 	sessionID      string
 	reason         string
@@ -139,6 +140,7 @@ type WorktreeManager interface {
 	Cleanup(name string, opts ...worktree.CleanupOpts) error
 	HasUnmergedCommits(name string) (bool, error)
 	CurrentBranch() (string, error)
+	ResolveCommit(ref string) (string, error)
 	CheckedOutBranch(path string) (string, error)
 	BranchExists(branch string) bool
 	BranchWorktree(branch string) (string, bool, error)

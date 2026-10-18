@@ -87,7 +87,7 @@ export function useReviewDiff(itemId: string) {
   return useQuery<DiffResponse>({
     queryKey: ["review-diff", itemId],
     queryFn: () => fetchReviewDiff(itemId),
-    staleTime: Infinity,
+    refetchOnWindowFocus: true,
   });
 }
 

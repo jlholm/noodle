@@ -74,6 +74,7 @@ func (l *Loop) ensureCanonicalLoadedFromBridge() error {
 			WorktreePath:   pending.worktreePath,
 			BranchName:     pending.branchName,
 			BaseBranch:     pending.baseBranch,
+			BaseCommit:     pending.baseCommit,
 			ApprovalAction: pending.approvalAction,
 			SessionID:      pending.sessionID,
 			Reason:         pending.reason,

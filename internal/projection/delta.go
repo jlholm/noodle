@@ -115,6 +115,13 @@ func computeOrderChanges(previous, current []OrderProjection) ([]DeltaChange, er
 }
 
 func diffOrder(basePath string, previous, current OrderProjection) ([]DeltaChange, error) {
+	if previous.WorktreeName != current.WorktreeName || previous.BranchName != current.BranchName || previous.BaseBranch != current.BaseBranch {
+		change, err := deltaSet(basePath, current)
+		if err != nil {
+			return nil, err
+		}
+		return []DeltaChange{change}, nil
+	}
 	changes := make([]DeltaChange, 0)
 
 	if previous.Status != current.Status {

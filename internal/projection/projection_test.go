@@ -445,6 +445,27 @@ func TestComputeDeltaDetectsAddedRemovedAndChangedOrders(t *testing.T) {
 	}
 }
 
+func TestComputeDeltaPublishesWorkspaceBinding(t *testing.T) {
+	previous := ProjectionBundle{OrdersProjection: []OrderProjection{{ID: "42", Status: "active"}}}
+	current := ProjectionBundle{OrdersProjection: []OrderProjection{{
+		ID: "42", Status: "active", WorktreeName: "order-42", BranchName: "noodle/42", BaseBranch: "main",
+	}}}
+	delta, err := ComputeDelta(previous, current)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(delta.Changes) != 1 || delta.Changes[0].Path != "orders.42" {
+		t.Fatalf("workspace binding delta = %+v", delta.Changes)
+	}
+	var got OrderProjection
+	if err := json.Unmarshal(delta.Changes[0].Value, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.BranchName != "noodle/42" {
+		t.Fatalf("branch missing from delta: %+v", got)
+	}
+}
+
 func TestComputeDeltaIdenticalBundlesReturnsEmptyDelta(t *testing.T) {
 	t.Parallel()
 
@@ -562,7 +583,7 @@ func TestOrderProjectionMapsFromOrderNode(t *testing.T) {
 	if order.ID != "order-1" || order.Status != string(state.OrderCancelled) {
 		t.Fatalf("order projection mismatch: %+v", order)
 	}
-	if order.Workspace == nil || order.Workspace.BranchName != "noodle/order-1" || bundle.SnapshotView.Orders[0].Workspace == nil {
+	if order.BranchName != "noodle/order-1" || order.BaseBranch != "main" || bundle.SnapshotView.Orders[0].BranchName != order.BranchName {
 		t.Fatalf("workspace missing from completed order: %+v", order)
 	}
 	if len(order.Stages) != 1 {

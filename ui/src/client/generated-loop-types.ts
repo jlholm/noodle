@@ -19,6 +19,7 @@ export interface PendingReviewItem {
   worktree_path: string;
   branch_name?: string;
   base_branch?: string;
+  base_commit?: string;
   approval_action?: string;
   session_id?: string;
   reason?: string;

@@ -108,6 +108,7 @@ type OrderWorkspace struct {
 	WorktreeName string `json:"worktree_name"`
 	BranchName   string `json:"branch_name"`
 	BaseBranch   string `json:"base_branch"`
+	BaseCommit   string `json:"base_commit"`
 }
 
 // StageNode represents a stage within an order.
@@ -162,6 +163,7 @@ type PendingReviewNode struct {
 	WorktreePath   string   `json:"worktree_path"`
 	BranchName     string   `json:"branch_name,omitempty"`
 	BaseBranch     string   `json:"base_branch,omitempty"`
+	BaseCommit     string   `json:"base_commit,omitempty"`
 	ApprovalAction string   `json:"approval_action,omitempty"`
 	SessionID      string   `json:"session_id"`
 	Reason         string   `json:"reason"`

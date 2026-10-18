@@ -4,7 +4,7 @@ import type { PendingReviewItem } from "~/client";
 import { DiffViewer } from "./DiffViewer";
 
 function ReviewReport({ review }: { review: PendingReviewItem }) {
-  const { data, isLoading, error } = useReviewDiff(review.order_id);
+  const { data, isLoading, error, refetch, isFetching } = useReviewDiff(review.order_id);
 
   return (
     <main className="review-report">
@@ -29,6 +29,20 @@ function ReviewReport({ review }: { review: PendingReviewItem }) {
 
       <section className="review-section">
         <h2 className="review-section-title">Generated Diff</h2>
+        {data?.uncommitted && (
+          <div role="status" className="px-4 py-3 text-sm text-accent">
+            This worktree has uncommitted changes. Review them below, commit the files in the
+            worktree, then refresh the diff to approve.
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => void refetch()}
+          disabled={isFetching}
+          className="feed-action-btn"
+        >
+          {isFetching ? "Refreshing…" : "Refresh Diff"}
+        </button>
         <DiffViewer
           diff={data?.diff ?? ""}
           stat={data?.stat ?? ""}
@@ -42,6 +56,7 @@ function ReviewReport({ review }: { review: PendingReviewItem }) {
 
 function ReviewActions({ review }: { review: PendingReviewItem }) {
   const { mutate: send, isPending } = useSendControl();
+  const { data: diff } = useReviewDiff(review.order_id);
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedback, setFeedback] = useState("");
 
@@ -75,7 +90,7 @@ function ReviewActions({ review }: { review: PendingReviewItem }) {
   let approveLabel = "Approve & Merge";
   let approvePendingLabel = "Merging…";
   if (review.approval_action === "complete") {
-    approveLabel = "Approve & Complete";
+    approveLabel = "Approve for Handoff";
     approvePendingLabel = "Completing…";
   } else if (review.approval_action === "continue") {
     approveLabel = "Approve & Continue";
@@ -144,7 +159,9 @@ function ReviewActions({ review }: { review: PendingReviewItem }) {
           type="button"
           className="review-action-btn review-action-primary"
           onClick={handleMerge}
-          disabled={isPending}
+          disabled={
+            isPending || (review.approval_action === "complete" && (!diff || diff.uncommitted))
+          }
         >
           {isPending ? approvePendingLabel : approveLabel}
         </button>

@@ -174,6 +174,7 @@ func synthesizeCanonicalState(
 				WorktreePath:   strings.TrimSpace(reviewItem.WorktreePath),
 				BranchName:     strings.TrimSpace(reviewItem.BranchName),
 				BaseBranch:     strings.TrimSpace(reviewItem.BaseBranch),
+				BaseCommit:     strings.TrimSpace(reviewItem.BaseCommit),
 				ApprovalAction: strings.TrimSpace(reviewItem.ApprovalAction),
 				SessionID:      strings.TrimSpace(reviewItem.SessionID),
 				Reason:         strings.TrimSpace(reviewItem.Reason),

@@ -27,6 +27,9 @@ func (l *Loop) controlMerge(orderID string) error {
 		}
 		return l.continueWorkspaceStage(pending)
 	}
+	if pending.approvalAction == approvalActionComplete || pending.approvalAction == approvalActionContinue {
+		return fmt.Errorf("order %s workspace binding not found", orderID)
+	}
 
 	// Merge the worktree.
 	cook := &cookHandle{
@@ -92,6 +95,11 @@ func (l *Loop) controlReject(orderID string) error {
 	if err := l.ensureCanonicalOrderFromOrders(orderID); err != nil {
 		return err
 	}
+	if pending.approvalAction == approvalActionComplete || pending.approvalAction == approvalActionContinue {
+		if _, err := l.reviewWorkspacePath(pending); err != nil {
+			return err
+		}
+	}
 	if _, using := l.usesOrderWorkspace(orderID, pending.worktreeName); !using && strings.TrimSpace(pending.worktreeName) != "" {
 		_ = l.deps.Worktree.Cleanup(pending.worktreeName, worktree.CleanupOpts{Force: true})
 	}
@@ -137,6 +145,11 @@ func (l *Loop) controlRequestChanges(orderID, feedback string) error {
 	}
 	if err := l.ensureCanonicalOrderFromOrders(orderID); err != nil {
 		return err
+	}
+	if pending.approvalAction == approvalActionComplete || pending.approvalAction == approvalActionContinue {
+		if _, err := l.reviewWorkspacePath(pending); err != nil {
+			return err
+		}
 	}
 	if l.atMaxConcurrency() {
 		l.logger.Info("request-changes deferred: at max concurrency", "order", orderID)

@@ -5,6 +5,7 @@ import { buildReview, buildSnapshot } from "~/test-utils";
 
 let mockSnapshot = buildSnapshot();
 const mockMutate = vi.fn();
+const diffState = { uncommitted: false };
 
 vi.mock("~/client", async () => {
   const actual = await vi.importActual("~/client");
@@ -12,7 +13,13 @@ vi.mock("~/client", async () => {
     ...(actual as Record<string, unknown>),
     useSuspenseSnapshot: () => ({ data: mockSnapshot }),
     useSendControl: () => ({ mutate: mockMutate, isPending: false }),
-    useReviewDiff: () => ({ data: { diff: "", stat: "" }, isLoading: false, error: undefined }),
+    useReviewDiff: () => ({
+      data: { diff: "", stat: "", uncommitted: diffState.uncommitted },
+      isLoading: false,
+      isFetching: false,
+      error: undefined,
+      refetch: vi.fn(),
+    }),
   };
 });
 
@@ -20,6 +27,7 @@ describe("ReviewList", () => {
   beforeEach(() => {
     mockMutate.mockReset();
     mockSnapshot = buildSnapshot();
+    diffState.uncommitted = false;
   });
 
   it("keeps a valid selection when reviews shrink", () => {
@@ -59,11 +67,24 @@ describe("ReviewList", () => {
 
     render(<ReviewList />);
 
-    expect(screen.getByRole("button", { name: "Approve & Complete" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Approve for Handoff" })).toBeInTheDocument();
     expect(screen.getByText("noodle/42-fix-login")).toBeInTheDocument();
     expect(screen.getByText("develop")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Approve & Complete" }));
+    fireEvent.click(screen.getByRole("button", { name: "Approve for Handoff" }));
     expect(mockMutate).toHaveBeenCalledWith({ action: "merge", order_id: "42" });
+  });
+
+  it("shows dirty work and blocks handoff approval until committed", () => {
+    diffState.uncommitted = true;
+    mockSnapshot = buildSnapshot({
+      pending_reviews: [buildReview({ approval_action: "complete" })],
+    });
+
+    render(<ReviewList />);
+
+    expect(screen.getByRole("button", { name: "Approve for Handoff" })).toBeDisabled();
+    expect(screen.getByText(/This worktree has uncommitted changes/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Refresh Diff" })).toBeInTheDocument();
   });
 
   it("labels a branch workspace review as continue", () => {

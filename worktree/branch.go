@@ -14,6 +14,19 @@ func (a *App) CurrentBranch() (string, error) {
 	return branch, nil
 }
 
+// ResolveCommit pins a branch or other ref to its current commit.
+func (a *App) ResolveCommit(ref string) (string, error) {
+	ref = strings.TrimSpace(ref)
+	if ref == "" || strings.HasPrefix(ref, "-") {
+		return "", fmt.Errorf("invalid commit ref %q", ref)
+	}
+	commit, err := a.gitOutput("rev-parse", "--verify", ref+"^{commit}")
+	if err != nil {
+		return "", fmt.Errorf("resolve commit for %s: %w", ref, err)
+	}
+	return strings.TrimSpace(commit), nil
+}
+
 // CheckedOutBranch returns the branch checked out at path.
 // An empty branch with a nil error means the checkout is detached.
 func (a *App) CheckedOutBranch(path string) (string, error) {

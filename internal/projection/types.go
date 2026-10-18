@@ -36,12 +36,15 @@ type ProjectionBundle struct {
 
 // OrderProjection is the projected view of an order in orders.json format.
 type OrderProjection struct {
-	ID        string            `json:"id"`
-	Title     string            `json:"title,omitempty"`
-	Plan      []string          `json:"plan,omitempty"`
-	Rationale string            `json:"rationale,omitempty"`
-	Stages    []StageProjection `json:"stages"`
-	Status    string            `json:"status"`
+	ID           string            `json:"id"`
+	Title        string            `json:"title,omitempty"`
+	Plan         []string          `json:"plan,omitempty"`
+	Rationale    string            `json:"rationale,omitempty"`
+	Stages       []StageProjection `json:"stages"`
+	Status       string            `json:"status"`
+	WorktreeName string            `json:"worktree_name,omitempty"`
+	BranchName   string            `json:"branch_name,omitempty"`
+	BaseBranch   string            `json:"base_branch,omitempty"`
 }
 
 // StageProjection is the projected view of a stage.
@@ -87,6 +90,7 @@ type PendingReviewProjection struct {
 	WorktreePath   string   `json:"worktree_path,omitempty"`
 	BranchName     string   `json:"branch_name,omitempty"`
 	BaseBranch     string   `json:"base_branch,omitempty"`
+	BaseCommit     string   `json:"base_commit,omitempty"`
 	ApprovalAction string   `json:"approval_action,omitempty"`
 	SessionID      string   `json:"session_id,omitempty"`
 	Reason         string   `json:"reason,omitempty"`

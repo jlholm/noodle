@@ -89,7 +89,7 @@ func TestBranchWorkspaceTwoStagesShareCheckout(t *testing.T) {
 		t.Fatalf("reviews = %#v", reviews)
 	}
 	review := reviews[0]
-	if review.ApprovalAction != approvalActionComplete || review.BranchName != wantBranch || review.BaseBranch != env.base {
+	if review.ApprovalAction != approvalActionComplete || review.BranchName != wantBranch || review.BaseBranch != env.base || review.BaseCommit != gitCommitID(t, env.dir, env.base) {
 		t.Fatalf("review = %#v", review)
 	}
 	if review.WorktreePath != first.WorktreePath {
@@ -118,6 +118,10 @@ func TestBranchWorkspaceBindingSurvivesMaterializationFailure(t *testing.T) {
 	if !ok {
 		t.Fatal("workspace binding was not persisted before Git creation")
 	}
+	if bound.BaseCommit != gitCommitID(t, env.dir, env.base) {
+		t.Fatalf("base commit = %q", bound.BaseCommit)
+	}
+	gitCommit(t, env.dir, "main advanced after workspace binding")
 	if err := os.Remove(blockedPath); err != nil {
 		t.Fatal(err)
 	}
@@ -128,6 +132,9 @@ func TestBranchWorkspaceBindingSurvivesMaterializationFailure(t *testing.T) {
 	}
 	if resumed != bound || currentBranch(t, blockedPath) != bound.BranchName {
 		t.Fatalf("resumed workspace = %#v, want %#v", resumed, bound)
+	}
+	if got := gitCommitID(t, env.dir, bound.BranchName); got != bound.BaseCommit {
+		t.Fatalf("branch starts at %s, want %s", got, bound.BaseCommit)
 	}
 }
 
@@ -199,8 +206,8 @@ func TestBranchWorkspaceRejectsMismatchedWorktree(t *testing.T) {
 	if len(orders.Orders) != 1 || orders.Orders[0].Status != OrderStatusFailed {
 		t.Fatalf("orders = %#v", orders.Orders)
 	}
-	if _, ok := env.loop.orderWorkspace("42"); ok {
-		t.Fatal("mismatched worktree was bound")
+	if ws, ok := env.loop.orderWorkspace("42"); !ok || ws.BranchName != renderBranchPattern(config.DefaultBranchPattern, "42", "Fix login") {
+		t.Fatalf("workspace intent was not persisted: %#v, bound=%v", ws, ok)
 	}
 	path := worktree.WorktreePath(env.dir, name)
 	if got := currentBranch(t, path); got != "someone-else" {
@@ -378,6 +385,70 @@ func TestBranchWorkspaceApprovalRejectsDifferentCheckout(t *testing.T) {
 	reviews, err := ReadPendingReview(env.loop.runtimeDir)
 	if err != nil || len(reviews) != 1 {
 		t.Fatalf("review after refusal = %#v err=%v", reviews, err)
+	}
+}
+
+func TestBranchWorkspaceApprovalRefusesMissingBaseCommit(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping git integration in short mode")
+	}
+	env := newGitLoop(t, branchTestConfig("supervised"))
+	env.setOrders(gitOrder("42", "Fix login", gitStage("execute", "execute", "process")))
+	env.cycle()
+	call := env.lastCall()
+	gitCommit(t, call.WorktreePath, "reviewed work")
+	env.complete("completed")
+	env.cycle()
+
+	node := env.loop.canonical.Orders["42"]
+	node.Workspace.BaseCommit = ""
+	env.loop.canonical.Orders["42"] = node
+	if err := env.loop.controlMerge("42"); err == nil || !strings.Contains(err.Error(), "base commit missing") {
+		t.Fatalf("approval error = %v", err)
+	}
+	if gitLogContains(t, env.dir, "reviewed work") {
+		t.Fatal("approval merged an order with an incomplete workspace binding")
+	}
+	reviews, err := ReadPendingReview(env.loop.runtimeDir)
+	if err != nil || len(reviews) != 1 {
+		t.Fatalf("review after refusal = %#v err=%v", reviews, err)
+	}
+}
+
+func TestBranchWorkspaceReviewActionsRefuseMissingBinding(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping git integration in short mode")
+	}
+	for _, tc := range []struct {
+		name string
+		run  func(*Loop) error
+	}{
+		{"reject", func(l *Loop) error { return l.controlReject("42") }},
+		{"request changes", func(l *Loop) error { return l.controlRequestChanges("42", "revise") }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			env := newGitLoop(t, branchTestConfig("supervised"))
+			env.setOrders(gitOrder("42", "Fix login", gitStage("execute", "execute", "process")))
+			env.cycle()
+			call := env.lastCall()
+			gitCommit(t, call.WorktreePath, "ready for review")
+			env.complete("completed")
+			env.cycle()
+
+			node := env.loop.canonical.Orders["42"]
+			node.Workspace = nil
+			env.loop.canonical.Orders["42"] = node
+			if err := tc.run(env.loop); err == nil || !strings.Contains(err.Error(), "workspace binding not found") {
+				t.Fatalf("review action error = %v", err)
+			}
+			if _, err := os.Stat(call.WorktreePath); err != nil {
+				t.Fatalf("review action removed worktree: %v", err)
+			}
+			reviews, err := ReadPendingReview(env.loop.runtimeDir)
+			if err != nil || len(reviews) != 1 {
+				t.Fatalf("review after refusal = %#v err=%v", reviews, err)
+			}
+		})
 	}
 }
 
@@ -744,6 +815,16 @@ func gitCommit(t *testing.T, dir, message string) {
 	}
 	git(t, dir, "add", "-A")
 	git(t, dir, "commit", "-q", "-m", message)
+}
+
+func gitCommitID(t *testing.T, dir, ref string) string {
+	t.Helper()
+	cmd := exec.Command("git", "-C", dir, "rev-parse", "--verify", ref+"^{commit}")
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("resolve %s: %v", ref, err)
+	}
+	return strings.TrimSpace(string(out))
 }
 
 func currentBranch(t *testing.T, dir string) string {

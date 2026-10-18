@@ -83,11 +83,19 @@ func (l *Loop) ensureOrderWorkspace(order Order) (state.OrderWorkspace, error) {
 		if err != nil {
 			return state.OrderWorkspace{}, err
 		}
+		baseCommit, err := l.deps.Worktree.ResolveCommit(base)
+		if err != nil {
+			return state.OrderWorkspace{}, err
+		}
 		ws = state.OrderWorkspace{
 			WorktreeName: orderWorktreeName(order.ID),
 			BranchName:   renderBranchPattern(l.config.Git.BranchPattern, order.ID, order.Title),
 			BaseBranch:   base,
+			BaseCommit:   baseCommit,
 		}
+	}
+	if ws.BaseCommit == "" {
+		return state.OrderWorkspace{}, fmt.Errorf("order %s workspace base commit missing", order.ID)
 	}
 	if err := config.ValidateBranchRef(ws.BranchName); err != nil {
 		return state.OrderWorkspace{}, err
@@ -95,13 +103,13 @@ func (l *Loop) ensureOrderWorkspace(order Order) (state.OrderWorkspace, error) {
 	if err := l.rejectSharedWorkspace(order.ID, ws); err != nil {
 		return state.OrderWorkspace{}, err
 	}
-	if err := l.materializeWorkspace(ws); err != nil {
-		return state.OrderWorkspace{}, err
-	}
 	if !bound {
 		if err := l.storeOrderWorkspace(order.ID, ws); err != nil {
 			return state.OrderWorkspace{}, err
 		}
+	}
+	if err := l.materializeWorkspace(ws); err != nil {
+		return state.OrderWorkspace{}, err
 	}
 	return ws, nil
 }
@@ -173,7 +181,7 @@ func (l *Loop) materializeWorkspace(ws state.OrderWorkspace) error {
 		}
 		return l.deps.Worktree.AttachBranch(ws.WorktreeName, ws.BranchName)
 	}
-	return l.deps.Worktree.CreateBranch(ws.WorktreeName, ws.BranchName, ws.BaseBranch)
+	return l.deps.Worktree.CreateBranch(ws.WorktreeName, ws.BranchName, ws.BaseCommit)
 }
 
 func (l *Loop) shouldResumeBranchStage(orderID string, stageIndex, attempt int) bool {
@@ -207,7 +215,7 @@ func (l *Loop) completeBranchWorkspace(ctx context.Context, cook *cookHandle, ws
 	if err != nil {
 		return l.failStage(ctx, cook, fmt.Sprintf("worktree status: %v", err))
 	}
-	ahead, err := l.deps.Worktree.CommitsAhead(ws.BranchName, ws.BaseBranch)
+	ahead, err := l.deps.Worktree.CommitsAhead(ws.BranchName, ws.BaseCommit)
 	if err != nil {
 		return l.failStage(ctx, cook, fmt.Sprintf("commit check: %v", err))
 	}
@@ -226,9 +234,9 @@ func (l *Loop) completeBranchWorkspace(ctx context.Context, cook *cookHandle, ws
 }
 
 func (l *Loop) approveBranchWorkspace(pending *pendingReviewCook) error {
-	path := strings.TrimSpace(pending.worktreePath)
-	if path == "" {
-		path = l.worktreePath(pending.worktreeName)
+	path, err := l.reviewWorkspacePath(pending)
+	if err != nil {
+		return err
 	}
 	clean, err := l.deps.Worktree.Clean(path)
 	if err != nil {
@@ -249,9 +257,9 @@ func (l *Loop) approveBranchWorkspace(pending *pendingReviewCook) error {
 }
 
 func (l *Loop) continueWorkspaceStage(pending *pendingReviewCook) error {
-	path := strings.TrimSpace(pending.worktreePath)
-	if path == "" {
-		path = l.worktreePath(pending.worktreeName)
+	path, err := l.reviewWorkspacePath(pending)
+	if err != nil {
+		return err
 	}
 	cook := &cookHandle{
 		cookIdentity: pending.cookIdentity,
@@ -261,6 +269,28 @@ func (l *Loop) continueWorkspaceStage(pending *pendingReviewCook) error {
 		session:      &adoptedSession{id: pending.sessionID, status: "completed"},
 	}
 	return l.finishWorkspaceReview(cook)
+}
+
+func (l *Loop) reviewWorkspacePath(pending *pendingReviewCook) (string, error) {
+	ws, ok := l.usesOrderWorkspace(pending.orderID, pending.worktreeName)
+	if !ok {
+		return "", fmt.Errorf("order %s workspace binding not found", pending.orderID)
+	}
+	if ws.BaseCommit == "" {
+		return "", fmt.Errorf("order %s workspace base commit missing", pending.orderID)
+	}
+	path := strings.TrimSpace(pending.worktreePath)
+	if path == "" {
+		path = l.worktreePath(pending.worktreeName)
+	}
+	branch, err := l.deps.Worktree.CheckedOutBranch(path)
+	if err != nil {
+		return "", fmt.Errorf("worktree branch: %w", err)
+	}
+	if branch != ws.BranchName {
+		return "", fmt.Errorf("worktree %s is on branch %q, expected %q", pending.worktreeName, branch, ws.BranchName)
+	}
+	return path, nil
 }
 
 func (l *Loop) finishWorkspaceReview(cook *cookHandle) error {

@@ -3,6 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowUp, ArrowDown } from "lucide-react";
 import { useSuspenseSnapshot, formatCost, formatDuration } from "~/client";
 import type { Snapshot } from "~/client";
+import { HandoffList } from "./HandoffList";
 
 type SortKey = "id" | "title" | "status" | "host" | "model" | "duration" | "cost";
 type SortDir = "asc" | "desc";
@@ -128,6 +129,8 @@ export function Dashboard() {
           New Order
         </button>
       </header>
+
+      <HandoffList orders={snapshot.orders} />
 
       {/* Stats bar */}
       <div className="flex gap-4 px-6 py-4 border-b border-border-subtle" data-testid="stats-bar">

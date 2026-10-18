@@ -83,12 +83,15 @@ type Session struct {
 
 // Order is a pipeline of stages in the snapshot.
 type Order struct {
-	ID        string   `json:"id"`
-	Title     string   `json:"title,omitempty"`
-	Plan      []string `json:"plan,omitempty"`
-	Rationale string   `json:"rationale,omitempty"`
-	Stages    []Stage  `json:"stages"`
-	Status    string   `json:"status"`
+	ID           string   `json:"id"`
+	Title        string   `json:"title,omitempty"`
+	Plan         []string `json:"plan,omitempty"`
+	Rationale    string   `json:"rationale,omitempty"`
+	Stages       []Stage  `json:"stages"`
+	Status       string   `json:"status"`
+	WorktreeName string   `json:"worktree_name,omitempty"`
+	BranchName   string   `json:"branch_name,omitempty"`
+	BaseBranch   string   `json:"base_branch,omitempty"`
 }
 
 // Stage is a unit of work within an order in the snapshot.

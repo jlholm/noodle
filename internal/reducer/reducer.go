@@ -73,6 +73,7 @@ type reviewPayload struct {
 	WorktreePath   string   `json:"worktree_path"`
 	BranchName     string   `json:"branch_name"`
 	BaseBranch     string   `json:"base_branch"`
+	BaseCommit     string   `json:"base_commit"`
 	ApprovalAction string   `json:"approval_action"`
 	Reason         string   `json:"reason"`
 	TaskKey        string   `json:"task_key"`
@@ -639,6 +640,7 @@ func reduceStageReviewParked(current state.State, event ingest.StateEvent) (stat
 		WorktreePath:   strings.TrimSpace(payload.WorktreePath),
 		BranchName:     strings.TrimSpace(payload.BranchName),
 		BaseBranch:     strings.TrimSpace(payload.BaseBranch),
+		BaseCommit:     strings.TrimSpace(payload.BaseCommit),
 		ApprovalAction: strings.TrimSpace(payload.ApprovalAction),
 		SessionID:      strings.TrimSpace(payload.SessionID),
 		Reason:         strings.TrimSpace(payload.Reason),

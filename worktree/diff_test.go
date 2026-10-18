@@ -116,10 +116,21 @@ func TestDiffWorktreeAgainstIncludesUncommittedChanges(t *testing.T) {
 	writeFile(t, filepath.Join(dir, "staged.txt"), "staged content")
 	runGitIn(t, dir, "add", "staged.txt")
 	writeFile(t, filepath.Join(dir, "untracked.txt"), "untracked content")
+	before, err := gitOutput(dir, "status", "--porcelain")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	result, err := DiffWorktreeAgainst(dir, "main")
 	if err != nil {
 		t.Fatal(err)
+	}
+	after, err := gitOutput(dir, "status", "--porcelain")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after != before {
+		t.Fatalf("review changed the working tree status: before %q, after %q", before, after)
 	}
 	for _, want := range []string{"unstaged content", "staged content", "untracked content"} {
 		if !strings.Contains(result.Diff, want) {

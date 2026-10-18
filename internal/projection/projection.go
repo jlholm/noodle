@@ -154,14 +154,20 @@ func projectOrders(s state.State) []OrderProjection {
 
 	orders := make([]OrderProjection, 0, len(ordered))
 	for _, order := range ordered {
-		orders = append(orders, OrderProjection{
+		projected := OrderProjection{
 			ID:        order.OrderID,
 			Title:     order.Title,
 			Plan:      append([]string(nil), order.Plan...),
 			Rationale: order.Rationale,
 			Stages:    projectStages(order.Stages),
 			Status:    projectOrderStatus(order.Status),
-		})
+		}
+		if order.Workspace != nil {
+			projected.WorktreeName = order.Workspace.WorktreeName
+			projected.BranchName = order.Workspace.BranchName
+			projected.BaseBranch = order.Workspace.BaseBranch
+		}
+		orders = append(orders, projected)
 	}
 	return orders
 }
@@ -243,6 +249,7 @@ func projectPendingReviews(s state.State) []PendingReviewProjection {
 			WorktreePath:   review.WorktreePath,
 			BranchName:     review.BranchName,
 			BaseBranch:     review.BaseBranch,
+			BaseCommit:     review.BaseCommit,
 			ApprovalAction: review.ApprovalAction,
 			SessionID:      review.SessionID,
 			Reason:         review.Reason,
@@ -313,12 +320,15 @@ func cloneOrderProjections(orders []OrderProjection) []OrderProjection {
 			stageCopy = append(stageCopy, stageClone)
 		}
 		cloned = append(cloned, OrderProjection{
-			ID:        order.ID,
-			Title:     order.Title,
-			Plan:      append([]string(nil), order.Plan...),
-			Rationale: order.Rationale,
-			Stages:    stageCopy,
-			Status:    order.Status,
+			ID:           order.ID,
+			Title:        order.Title,
+			Plan:         append([]string(nil), order.Plan...),
+			Rationale:    order.Rationale,
+			Stages:       stageCopy,
+			Status:       order.Status,
+			WorktreeName: order.WorktreeName,
+			BranchName:   order.BranchName,
+			BaseBranch:   order.BaseBranch,
 		})
 	}
 	return cloned
@@ -344,6 +354,7 @@ func clonePendingReviewProjections(reviews []PendingReviewProjection) []PendingR
 			WorktreePath:   review.WorktreePath,
 			BranchName:     review.BranchName,
 			BaseBranch:     review.BaseBranch,
+			BaseCommit:     review.BaseCommit,
 			ApprovalAction: review.ApprovalAction,
 			SessionID:      review.SessionID,
 			Reason:         review.Reason,

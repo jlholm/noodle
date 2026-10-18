@@ -311,7 +311,13 @@ func (s *Server) handleReviewDiff(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	base := s.integrationBranch
-	if strings.TrimSpace(found.BaseBranch) != "" {
+	if found.BranchName != "" {
+		base = found.BaseCommit
+		if base == "" {
+			http.Error(w, "review base commit missing", http.StatusInternalServerError)
+			return
+		}
+	} else if strings.TrimSpace(found.BaseBranch) != "" {
 		base = found.BaseBranch
 	}
 	result, err := worktree.DiffWorktreeAgainst(found.WorktreePath, base)

@@ -117,12 +117,15 @@ func LoadSnapshot(runtimeDir string, now time.Time, state loop.LoopState) (Snaps
 			stages = append(stages, s)
 		}
 		orders = append(orders, Order{
-			ID:        order.ID,
-			Title:     order.Title,
-			Plan:      append([]string(nil), order.Plan...),
-			Rationale: order.Rationale,
-			Stages:    stages,
-			Status:    order.Status,
+			ID:           order.ID,
+			Title:        order.Title,
+			Plan:         append([]string(nil), order.Plan...),
+			Rationale:    order.Rationale,
+			Stages:       stages,
+			Status:       order.Status,
+			WorktreeName: order.WorktreeName,
+			BranchName:   order.BranchName,
+			BaseBranch:   order.BaseBranch,
 		})
 	}
 
@@ -169,6 +172,7 @@ func projectedPendingReviews(reviews []projection.PendingReviewProjection) []loo
 			WorktreePath:   review.WorktreePath,
 			BranchName:     review.BranchName,
 			BaseBranch:     review.BaseBranch,
+			BaseCommit:     review.BaseCommit,
 			ApprovalAction: review.ApprovalAction,
 			SessionID:      review.SessionID,
 			Reason:         review.Reason,

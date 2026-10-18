@@ -28,15 +28,15 @@ type CookSummary struct {
 }
 
 type LoopState struct {
-	UpdatedAt          time.Time               `json:"updated_at"`
-	Projection         projection.SnapshotView `json:"projection"`
-	ActiveCooks        []CookSummary           `json:"active_cooks"`
-	RecentHistory      []mise.HistoryItem      `json:"recent_history"`
-	Status             string                  `json:"status"`
-	ActiveSummary      mise.ActiveSummary      `json:"active_summary"`
-	TotalCostUSD       float64                 `json:"total_cost_usd"`
-	MaxConcurrency     int                     `json:"max_concurrency"`
-	Warnings           []string                `json:"warnings"`
+	UpdatedAt      time.Time               `json:"updated_at"`
+	Projection     projection.SnapshotView `json:"projection"`
+	ActiveCooks    []CookSummary           `json:"active_cooks"`
+	RecentHistory  []mise.HistoryItem      `json:"recent_history"`
+	Status         string                  `json:"status"`
+	ActiveSummary  mise.ActiveSummary      `json:"active_summary"`
+	TotalCostUSD   float64                 `json:"total_cost_usd"`
+	MaxConcurrency int                     `json:"max_concurrency"`
+	Warnings       []string                `json:"warnings"`
 }
 
 func (l *Loop) publishState() {
@@ -73,15 +73,15 @@ func (l *Loop) buildLoopStateSnapshot() *LoopState {
 	})
 
 	return &LoopState{
-		UpdatedAt:          l.deps.Now().UTC(),
-		Projection:         projected,
-		ActiveCooks:        activeCooks,
-		RecentHistory:      l.snapshotRecentHistory(),
-		Status:             string(l.state),
-		ActiveSummary:      l.snapshotActiveSummary(),
-		TotalCostUSD:       totalCost,
-		MaxConcurrency:     l.config.Concurrency.MaxConcurrency,
-		Warnings:           append([]string(nil), l.lastMiseWarnings...),
+		UpdatedAt:      l.deps.Now().UTC(),
+		Projection:     projected,
+		ActiveCooks:    activeCooks,
+		RecentHistory:  l.snapshotRecentHistory(),
+		Status:         string(l.state),
+		ActiveSummary:  l.snapshotActiveSummary(),
+		TotalCostUSD:   totalCost,
+		MaxConcurrency: l.config.Concurrency.MaxConcurrency,
+		Warnings:       append([]string(nil), l.lastMiseWarnings...),
 	}
 }
 
@@ -138,12 +138,15 @@ func cloneLoopState(state LoopState) LoopState {
 			stageCopy = append(stageCopy, stageClone)
 		}
 		cloned.Projection.Orders = append(cloned.Projection.Orders, projection.OrderProjection{
-			ID:        order.ID,
-			Title:     order.Title,
-			Plan:      append([]string(nil), order.Plan...),
-			Rationale: order.Rationale,
-			Status:    order.Status,
-			Stages:    stageCopy,
+			ID:           order.ID,
+			Title:        order.Title,
+			Plan:         append([]string(nil), order.Plan...),
+			Rationale:    order.Rationale,
+			Status:       order.Status,
+			Stages:       stageCopy,
+			WorktreeName: order.WorktreeName,
+			BranchName:   order.BranchName,
+			BaseBranch:   order.BaseBranch,
 		})
 	}
 	for _, review := range state.Projection.PendingReviews {
